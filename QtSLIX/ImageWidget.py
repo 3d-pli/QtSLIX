@@ -1,7 +1,7 @@
 import numpy
-from PyQt5.QtWidgets import QWidget, QScrollBar, QHBoxLayout, QVBoxLayout, QSizePolicy, QLabel
+from PyQt5.QtWidgets import QWidget, QScrollBar, QVBoxLayout, QLabel
 from PyQt5.QtGui import QImage, QPixmap, qRgb, QResizeEvent
-from PyQt5.QtCore import QCoreApplication, QObject, QThread, pyqtSignal, Qt
+from PyQt5.QtCore import Qt
 
 
 def convert_numpy_to_qimage(image: numpy.array) -> [QImage]:
@@ -18,14 +18,18 @@ def convert_numpy_to_qimage(image: numpy.array) -> [QImage]:
     return_list = []
     gray_color_table = [qRgb(i, i, i) for i in range(256)]
 
-    # Convert image to QImage
-    for i in range(num_measurements):
-        if num_measurements > 1:
-            image_i = image[..., i].copy()
-        else:
-            image_i = image.copy()
-        qimage = QImage(image_i.data, image_i.shape[1], image_i.shape[0], image_i.strides[0], QImage.Format_Indexed8)
-        qimage.setColorTable(gray_color_table)
+    if num_measurements != 3:
+        # Convert image to QImage
+        for i in range(num_measurements):
+            if num_measurements > 1:
+                image_i = image[..., i].copy()
+            else:
+                image_i = image.copy()
+            qimage = QImage(image_i.data, image_i.shape[1], image_i.shape[0], image_i.strides[0], QImage.Format_Indexed8)
+            qimage.setColorTable(gray_color_table)
+            return_list.append(qimage.copy())
+    else:
+        qimage = QImage(image.data, image.shape[1], image.shape[0], image.strides[0], QImage.Format_RGB888)
         return_list.append(qimage.copy())
     return return_list
 

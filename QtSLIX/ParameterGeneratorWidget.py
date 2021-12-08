@@ -206,8 +206,6 @@ class ParameterGeneratorWidget(QWidget):
         self.filename = None
         self.image = None
 
-        self.image_widget = None
-
         self.setup_ui()
 
     def setup_ui(self):
@@ -231,6 +229,8 @@ class ParameterGeneratorWidget(QWidget):
         self.sidebar_button_open_folder = QPushButton("Open Folder")
         self.sidebar_button_open_folder.clicked.connect(self.open_folder)
         self.sidebar.addWidget(self.sidebar_button_open_folder)
+
+        self.sidebar.addStretch(5)
 
         self.sidebar_checkbox_average = QCheckBox("Average")
         self.sidebar_checkbox_average.setChecked(False)
@@ -268,6 +268,8 @@ class ParameterGeneratorWidget(QWidget):
         self.sidebar_checkbox_peaks.setChecked(True)
         self.sidebar.addWidget(self.sidebar_checkbox_peaks)
 
+        self.sidebar.addStretch(1)
+
         self.sidebar_checkbox_detailed = QCheckBox("Detailed")
         self.sidebar_checkbox_detailed.setChecked(False)
         self.sidebar.addWidget(self.sidebar_checkbox_detailed)
@@ -277,6 +279,8 @@ class ParameterGeneratorWidget(QWidget):
         self.sidebar_checkbox_use_gpu.setEnabled(SLIX.toolbox.gpu_available)
         self.sidebar_checkbox_use_gpu.setChecked(SLIX.toolbox.gpu_available)
         self.sidebar.addWidget(self.sidebar_checkbox_use_gpu)
+
+        self.sidebar.addStretch(5)
 
         self.sidebar_button_generate = QPushButton("Generate")
         self.sidebar_button_generate.clicked.connect(self.generate)
