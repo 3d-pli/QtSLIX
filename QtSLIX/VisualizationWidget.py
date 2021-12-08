@@ -21,7 +21,6 @@ class VisualizationWidget(QWidget):
 
         self.parameter_map = None
         self.parameter_map_color_map = None
-        self.parameter_map_tab_button_generate = None
         self.parameter_map_tab_button_save = None
 
         self.fom = None
@@ -131,11 +130,7 @@ class VisualizationWidget(QWidget):
         for cmap in matplotlib.cm.cmap_d.keys():
             self.parameter_map_color_map.addItem(cmap)
         parameter_map_tab.layout.addWidget(self.parameter_map_color_map)
-
-        self.parameter_map_tab_button_generate = QPushButton("Show")
-        self.parameter_map_tab_button_generate.clicked.connect(self.generate_parameter_map)
-        self.parameter_map_tab_button_generate.setEnabled(False)
-        parameter_map_tab.layout.addWidget(self.parameter_map_tab_button_generate)
+        self.parameter_map_color_map.currentIndexChanged.connect(self.generate_parameter_map)
 
         self.parameter_map_tab_button_save = QPushButton("Save preview")
         self.parameter_map_tab_button_save.clicked.connect(self.save_parameter_map)
@@ -176,8 +171,8 @@ class VisualizationWidget(QWidget):
         filename = QFileDialog.getOpenFileName(self, 'Open Parameter Map', '.', '*.tiff;; *.h5;; *.nii')[0]
         if len(filename) > 0:
             self.parameter_map = SLIX.io.imread(filename)
-            self.parameter_map_tab_button_generate.setEnabled(True)
             self.parameter_map_tab_button_save.setEnabled(True)
+            self.generate_parameter_map()
 
     def open_saturation_weighting(self):
         filename = QFileDialog.getOpenFileName(self, 'Open Saturation weight', '.', '*.tiff;; *.h5;; *.nii')[0]
