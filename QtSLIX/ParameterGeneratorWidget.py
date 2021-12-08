@@ -1,14 +1,16 @@
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, \
-    QFileDialog, QCheckBox, QPushButton, QProgressDialog
+    QFileDialog, QCheckBox, QPushButton, QProgressDialog, QSizePolicy
 from PyQt5.QtCore import QCoreApplication, QObject, QThread, pyqtSignal
+
+from .ImageWidget import ImageWidget, convert_numpy_to_qimage
 
 import SLIX
 import numpy
 import os
 import time
 
-import cupy
-import numba
+if SLIX.toolbox.gpu_available:
+    import cupy
 
 
 class ParameterGeneratorWorker(QObject):
@@ -204,6 +206,8 @@ class ParameterGeneratorWidget(QWidget):
         self.filename = None
         self.image = None
 
+        self.image_widget = None
+
         self.setup_ui()
 
     def setup_ui(self):
@@ -280,7 +284,8 @@ class ParameterGeneratorWidget(QWidget):
         self.sidebar.addWidget(self.sidebar_button_generate)
 
     def setup_ui_image_widget(self):
-        self.image_widget = QWidget()
+        self.image_widget = ImageWidget()
+        self.image_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
     def open_measurement(self):
         file = QFileDialog.getOpenFileName(self, "Open Measurement", "",
@@ -290,6 +295,9 @@ class ParameterGeneratorWidget(QWidget):
         self.filename = file
         self.image = SLIX.io.imread(file)
         self.sidebar_button_generate.setEnabled(True)
+
+        if self.image_widget:
+            self.image_widget.set_image(convert_numpy_to_qimage(self.image))
 
     def open_folder(self):
         folder = QFileDialog.getExistingDirectory(self, "Open Folder", "")
@@ -302,9 +310,11 @@ class ParameterGeneratorWidget(QWidget):
         self.sidebar_button_generate.setEnabled(True)
 
     def generate(self):
+        self.sidebar_button_generate.setEnabled(False)
         output_folder = QFileDialog.getExistingDirectory(self, "Save files in folder", "")
 
         if not output_folder:
+            self.sidebar_button_generate.setEnabled(True)
             return
 
         dialog = QProgressDialog("Generating...", "Cancel", 0, 0, self)
@@ -340,5 +350,8 @@ class ParameterGeneratorWidget(QWidget):
         del worker
         del worker_thread
 
-        mempool = cupy.get_default_memory_pool()
-        mempool.free_all_blocks()
+        if SLIX.toolbox.gpu_available:
+            mempool = cupy.get_default_memory_pool()
+            mempool.free_all_blocks()
+
+        self.sidebar_button_generate.setEnabled(True)

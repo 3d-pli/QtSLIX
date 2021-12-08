@@ -22,6 +22,16 @@ class MainWindow(QMainWindow):
         self.tab_bar = None
 
         self.setWindowTitle('QtSLIX')
+        self.setMinimumSize(1280, 720)
+
+        screens = QApplication.screens()
+        max_width = 0
+        max_height = 0
+        for screen in screens:
+            max_width = max(screen.availableSize().width(), max_width)
+            max_height = max(screen.availableSize().height(), max_height)
+        self.setMaximumSize(max_width, max_height)
+
         self.setup_ui()
         self.show()
 
