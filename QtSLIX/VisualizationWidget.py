@@ -22,6 +22,7 @@ class VisualizationWidget(QWidget):
         self.parameter_map = None
         self.parameter_map_color_map = None
         self.parameter_map_tab_button_generate = None
+        self.parameter_map_tab_button_save = None
 
         self.fom = None
         self.fom_checkbox_weight_saturation = None
@@ -131,10 +132,15 @@ class VisualizationWidget(QWidget):
             self.parameter_map_color_map.addItem(cmap)
         parameter_map_tab.layout.addWidget(self.parameter_map_color_map)
 
-        self.parameter_map_tab_button_generate = QPushButton("Generate")
+        self.parameter_map_tab_button_generate = QPushButton("Show")
         self.parameter_map_tab_button_generate.clicked.connect(self.generate_parameter_map)
         self.parameter_map_tab_button_generate.setEnabled(False)
         parameter_map_tab.layout.addWidget(self.parameter_map_tab_button_generate)
+
+        self.parameter_map_tab_button_save = QPushButton("Save preview")
+        self.parameter_map_tab_button_save.clicked.connect(self.save_parameter_map)
+        self.parameter_map_tab_button_save.setEnabled(False)
+        parameter_map_tab.layout.addWidget(self.parameter_map_tab_button_save)
 
         parameter_map_tab.layout.addStretch()
 
@@ -171,6 +177,7 @@ class VisualizationWidget(QWidget):
         if len(filename) > 0:
             self.parameter_map = SLIX.io.imread(filename)
             self.parameter_map_tab_button_generate.setEnabled(True)
+            self.parameter_map_tab_button_save.setEnabled(True)
 
     def open_saturation_weighting(self):
         filename = QFileDialog.getOpenFileName(self, 'Open Saturation weight', '.', '*.tiff;; *.h5;; *.nii')[0]
@@ -218,3 +225,19 @@ class VisualizationWidget(QWidget):
             if not filename.endswith(datatype):
                 filename += datatype
             SLIX.io.imwrite_rgb(filename, self.fom)
+
+    def save_parameter_map(self):
+        filename, datatype = QFileDialog.getSaveFileName(self, 'Save Parameter Map', '.', '*.tiff;; *.h5')
+        if len(filename) > 0:
+            datatype = datatype[1:]
+            if not filename.endswith(datatype):
+                filename += datatype
+
+            colormap = matplotlib.cm.get_cmap(self.parameter_map_color_map.currentText())
+            shown_image = self.parameter_map.copy()
+            shown_image = shown_image.astype(numpy.float32)
+            shown_image = (shown_image - shown_image.min()) / (shown_image.max() - shown_image.min())
+            shown_image = colormap(shown_image)
+            shown_image = (255 * shown_image[:, :, :3]).astype(numpy.uint8)
+            SLIX.io.imwrite_rgb(filename, shown_image)
+
