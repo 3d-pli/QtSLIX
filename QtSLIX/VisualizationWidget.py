@@ -17,16 +17,19 @@ class VisualizationWidget(QWidget):
         self.sidebar_tabbar = None
         self.image_widget = None
         self.filename = None
-        self.image = None
         self.color_map = None
 
+        self.parameter_map = None
         self.parameter_map_color_map = None
         self.parameter_map_tab_button_generate = None
 
+        self.fom = None
         self.fom_checkbox_weight_saturation = None
         self.fom_checkbox_weight_value = None
         self.fom_tab_button_generate = None
         self.fom_tab_save_button = None
+
+        self.vector_field = None
 
         self.directions = None
         self.saturation_weighting = None
@@ -166,7 +169,7 @@ class VisualizationWidget(QWidget):
     def open_parameter_map(self):
         filename = QFileDialog.getOpenFileName(self, 'Open Parameter Map', '.', '*.tiff;; *.h5;; *.nii')[0]
         if len(filename) > 0:
-            self.image = SLIX.io.imread(filename)
+            self.parameter_map = SLIX.io.imread(filename)
             self.parameter_map_tab_button_generate.setEnabled(True)
 
     def open_saturation_weighting(self):
@@ -191,10 +194,10 @@ class VisualizationWidget(QWidget):
         color_map = SLIX._cmd.VisualizeParameter.available_colormaps[self.color_map.currentText()]
 
         try:
-            self.image = SLIX.visualization.direction(self.directions, saturation=saturation_weighting,
+            self.fom = SLIX.visualization.direction(self.directions, saturation=saturation_weighting,
                                                       value=value_weighting, colormap=color_map)
 
-            self.image_widget.set_image(convert_numpy_to_qimage(self.image))
+            self.image_widget.set_image(convert_numpy_to_qimage(self.fom))
             self.fom_tab_save_button.setEnabled(True)
         except ValueError as e:
             QMessageBox.critical(self, 'Error', f'Could not generate FOM. Check your input files.\n'
@@ -202,7 +205,7 @@ class VisualizationWidget(QWidget):
 
     def generate_parameter_map(self):
         colormap = matplotlib.cm.get_cmap(self.parameter_map_color_map.currentText())
-        shown_image = self.image.copy()
+        shown_image = self.parameter_map.copy()
         shown_image = shown_image.astype(numpy.float32)
         shown_image = (shown_image - shown_image.min()) / (shown_image.max() - shown_image.min())
         shown_image = colormap(shown_image)
@@ -214,4 +217,4 @@ class VisualizationWidget(QWidget):
             datatype = datatype[1:]
             if not filename.endswith(datatype):
                 filename += datatype
-            SLIX.io.imwrite_rgb(filename, self.image)
+            SLIX.io.imwrite_rgb(filename, self.fom)
