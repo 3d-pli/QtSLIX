@@ -45,8 +45,11 @@ class ImageWidget(QWidget):
     def init_ui(self):
         self.layout = QVBoxLayout()
 
-        self.pixmap = QPixmap.fromImage(QImage(self.maximumWidth(), self.maximumHeight(),
-                                               QImage.Format_Grayscale8))
+        self.image = QImage(self.maximumWidth(), self.maximumHeight(),
+                            QImage.Format_Grayscale8)
+        self.image.fill(0)
+        self.pixmap = QPixmap.fromImage(self.image)
+
         self.image_label = QLabel()
         self.image_label.setPixmap(self.pixmap)
         self.image_label.setScaledContents(False)
@@ -75,5 +78,6 @@ class ImageWidget(QWidget):
         self.image_scroll_bar.setValue(0)
 
     def resizeEvent(self, a0: QResizeEvent) -> None:
-        self.image_label.setPixmap(self.pixmap.scaled(self.image_label.size(), Qt.KeepAspectRatio))
+        if self.pixmap and not self.pixmap.isNull() and self.image_label:
+            self.image_label.setPixmap(self.pixmap.scaled(self.image_label.size(), Qt.KeepAspectRatio))
         super().resizeEvent(a0)
