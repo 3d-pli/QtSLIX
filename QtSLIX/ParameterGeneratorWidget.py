@@ -293,7 +293,7 @@ class ParameterGeneratorWidget(QWidget):
 
     def open_measurement(self):
         file = QFileDialog.getOpenFileName(self, "Open Measurement", "",
-                                           "Measurement Files (*.tiff *.tif *.h5 *.nii *.nii.gz)")[0]
+                                           "*.tiff ;; *.tif ;; *.h5 ;; *.nii ;; *.nii.gz")[0]
         if not file:
             return
         self.filename = file

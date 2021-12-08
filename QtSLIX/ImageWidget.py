@@ -16,9 +16,10 @@ def convert_numpy_to_qimage(image: numpy.array) -> [QImage]:
         num_measurements = 1
 
     return_list = []
-    gray_color_table = [qRgb(i, i, i) for i in range(256)]
 
     if num_measurements != 3:
+        gray_color_table = [qRgb(i, i, i) for i in range(256)]
+
         # Convert image to QImage
         for i in range(num_measurements):
             if num_measurements > 1:
@@ -72,16 +73,22 @@ class ImageWidget(QWidget):
 
     def scroll_bar_changed(self):
         self.pixmap = QPixmap.fromImage(self.image[self.image_scroll_bar.value()])
-        self.image_label.setPixmap(self.pixmap.scaled(self.image_label.size(), Qt.KeepAspectRatio))
+        self.image_label.setPixmap(self.pixmap.scaled(self.image_label.size(),
+                                                      Qt.KeepAspectRatio,
+                                                      Qt.SmoothTransformation))
 
     def set_image(self, image: [QImage]):
         self.image = image
         self.pixmap = QPixmap.fromImage(self.image[0])
-        self.image_label.setPixmap(self.pixmap.scaled(self.image_label.size(), Qt.KeepAspectRatio))
+        self.image_label.setPixmap(self.pixmap.scaled(self.image_label.size(),
+                                                      Qt.KeepAspectRatio,
+                                                      Qt.SmoothTransformation))
         self.image_scroll_bar.setRange(0, len(self.image) - 1)
         self.image_scroll_bar.setValue(0)
 
     def resizeEvent(self, a0: QResizeEvent) -> None:
         if self.pixmap and not self.pixmap.isNull() and self.image_label:
-            self.image_label.setPixmap(self.pixmap.scaled(self.image_label.size(), Qt.KeepAspectRatio))
+            self.image_label.setPixmap(self.pixmap.scaled(self.image_label.size(),
+                                                          Qt.KeepAspectRatio,
+                                                          Qt.SmoothTransformation))
         super().resizeEvent(a0)

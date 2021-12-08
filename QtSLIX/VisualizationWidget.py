@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, \
-    QFileDialog, QCheckBox, QPushButton, QProgressDialog, QSizePolicy, QTabWidget, QComboBox, QLabel
+    QFileDialog, QCheckBox, QPushButton, QProgressDialog, QSizePolicy, QTabWidget, QComboBox, QLabel, QMessageBox
 from PyQt5.QtCore import QCoreApplication, QObject, QThread, pyqtSignal
 
 import SLIX._cmd.VisualizeParameter
@@ -21,6 +21,7 @@ class VisualizationWidget(QWidget):
         self.fom_checkbox_weight_saturation = None
         self.fom_checkbox_weight_value = None
         self.fom_tab_button_generate = None
+        self.fom_tab_save_button = None
 
         self.directions = None
         self.saturation_weighting = None
@@ -91,6 +92,11 @@ class VisualizationWidget(QWidget):
         self.fom_tab_button_generate.setEnabled(False)
         fom_tab.layout.addWidget(self.fom_tab_button_generate)
 
+        self.fom_tab_save_button = QPushButton("Save")
+        self.fom_tab_save_button.clicked.connect(self.save_fom)
+        self.fom_tab_save_button.setEnabled(False)
+        fom_tab.layout.addWidget(self.fom_tab_save_button)
+
         fom_tab.setLayout(fom_tab.layout)
         return fom_tab
 
@@ -105,23 +111,27 @@ class VisualizationWidget(QWidget):
     def open_direction(self):
         filename = QFileDialog.getOpenFileNames(self, 'Open Directions', '.', '*.tiff;; *.h5;; *.nii')[0]
         if len(filename) > 0:
-            direction_image = None
-            for file in filename:
-                single_direction_image = SLIX.io.imread(file)
-                if direction_image is None:
-                    direction_image = single_direction_image
-                else:
-                    if len(direction_image.shape) == 2:
-                        direction_image = numpy.stack((direction_image,
-                                                       single_direction_image),
-                                                      axis=-1)
+            try:
+                direction_image = None
+                for file in filename:
+                    single_direction_image = SLIX.io.imread(file)
+                    if direction_image is None:
+                        direction_image = single_direction_image
                     else:
-                        direction_image = numpy.concatenate((direction_image,
-                                                             single_direction_image
-                                                             [:, :, numpy.newaxis]),
-                                                            axis=-1)
-            self.directions = direction_image
-            self.fom_tab_button_generate.setEnabled(True)
+                        if len(direction_image.shape) == 2:
+                            direction_image = numpy.stack((direction_image,
+                                                           single_direction_image),
+                                                          axis=-1)
+                        else:
+                            direction_image = numpy.concatenate((direction_image,
+                                                                 single_direction_image
+                                                                 [:, :, numpy.newaxis]),
+                                                                axis=-1)
+                self.directions = direction_image
+                self.fom_tab_button_generate.setEnabled(True)
+            except ValueError as e:
+                QMessageBox.critical(self, 'Error',
+                                     f'Could not load directions. Check your input files. Error message:\n{e}')
 
     def open_saturation_weighting(self):
         filename = QFileDialog.getOpenFileName(self, 'Open Saturation weight', '.', '*.tiff;; *.h5;; *.nii')[0]
@@ -144,7 +154,20 @@ class VisualizationWidget(QWidget):
             value_weighting = None
         color_map = SLIX._cmd.VisualizeParameter.available_colormaps[self.color_map.currentText()]
 
-        self.image = SLIX.visualization.direction(self.directions, saturation=saturation_weighting,
-                                                  value=value_weighting, colormap=color_map)
+        try:
+            self.image = SLIX.visualization.direction(self.directions, saturation=saturation_weighting,
+                                                      value=value_weighting, colormap=color_map)
 
-        self.image_widget.set_image(convert_numpy_to_qimage(self.image))
+            self.image_widget.set_image(convert_numpy_to_qimage(self.image))
+            self.fom_tab_save_button.setEnabled(True)
+        except ValueError as e:
+            QMessageBox.critical(self, 'Error', f'Could not generate FOM. Check your input files.\n'
+                                                f'Error message:\n{e}')
+
+    def save_fom(self):
+        filename, datatype = QFileDialog.getSaveFileName(self, 'Save FOM', '.', '*.tiff;; *.h5')
+        if len(filename) > 0:
+            datatype = datatype[1:]
+            if not filename.endswith(datatype):
+                filename += datatype
+            SLIX.io.imwrite_rgb(filename, self.image)
