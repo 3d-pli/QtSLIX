@@ -17,7 +17,13 @@ def convert_numpy_to_qimage(image: numpy.array) -> [QImage]:
 
     return_list = []
 
-    if num_measurements != 3:
+    if num_measurements == 3:
+        qimage = QImage(image.data, image.shape[1], image.shape[0], image.strides[0], QImage.Format_RGB888)
+        return_list.append(qimage.copy())
+    elif num_measurements == 4:
+        qimage = QImage(image.data, image.shape[1], image.shape[0], image.strides[0], QImage.Format_ARGB32)
+        return_list.append(qimage.copy())
+    else:
         gray_color_table = [qRgb(i, i, i) for i in range(256)]
 
         # Convert image to QImage
@@ -29,9 +35,7 @@ def convert_numpy_to_qimage(image: numpy.array) -> [QImage]:
             qimage = QImage(image_i.data, image_i.shape[1], image_i.shape[0], image_i.strides[0], QImage.Format_Indexed8)
             qimage.setColorTable(gray_color_table)
             return_list.append(qimage.copy())
-    else:
-        qimage = QImage(image.data, image.shape[1], image.shape[0], image.strides[0], QImage.Format_RGB888)
-        return_list.append(qimage.copy())
+
     return return_list
 
 

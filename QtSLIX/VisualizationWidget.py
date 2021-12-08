@@ -5,6 +5,8 @@ from PyQt5.QtCore import QCoreApplication, QObject, QThread, pyqtSignal
 import SLIX._cmd.VisualizeParameter
 from .ImageWidget import ImageWidget, convert_numpy_to_qimage
 import numpy
+import matplotlib
+from matplotlib import pyplot as plt
 
 
 class VisualizationWidget(QWidget):
@@ -17,6 +19,9 @@ class VisualizationWidget(QWidget):
         self.filename = None
         self.image = None
         self.color_map = None
+
+        self.parameter_map_color_map = None
+        self.parameter_map_tab_button_generate = None
 
         self.fom_checkbox_weight_saturation = None
         self.fom_checkbox_weight_value = None
@@ -39,6 +44,7 @@ class VisualizationWidget(QWidget):
         self.sidebar_tabbar = QTabWidget()
         self.sidebar_tabbar.addTab(self.setup_fom_tab(), 'FOM')
         self.sidebar_tabbar.addTab(self.setup_vector_tab(), 'Vector')
+        self.sidebar_tabbar.addTab(self.setup_parameter_map_tab(), 'Parameter Map')
         self.sidebar.addWidget(self.sidebar_tabbar)
 
         self.setup_ui_image_widget()
@@ -108,6 +114,30 @@ class VisualizationWidget(QWidget):
         vector_tab.setLayout(vector_tab.layout)
         return vector_tab
 
+    def setup_parameter_map_tab(self):
+        parameter_map_tab = QWidget()
+        parameter_map_tab.layout = QVBoxLayout()
+
+        parameter_map_button_open = QPushButton("Open parameter map")
+        parameter_map_button_open.clicked.connect(self.open_parameter_map)
+        parameter_map_tab.layout.addWidget(parameter_map_button_open)
+
+        parameter_map_tab.layout.addWidget(QLabel("Color map:"))
+        self.parameter_map_color_map = QComboBox()
+        for cmap in matplotlib.cm.cmap_d.keys():
+            self.parameter_map_color_map.addItem(cmap)
+        parameter_map_tab.layout.addWidget(self.parameter_map_color_map)
+
+        self.parameter_map_tab_button_generate = QPushButton("Generate")
+        self.parameter_map_tab_button_generate.clicked.connect(self.generate_parameter_map)
+        self.parameter_map_tab_button_generate.setEnabled(False)
+        parameter_map_tab.layout.addWidget(self.parameter_map_tab_button_generate)
+
+        parameter_map_tab.layout.addStretch()
+
+        parameter_map_tab.setLayout(parameter_map_tab.layout)
+        return parameter_map_tab
+
     def open_direction(self):
         filename = QFileDialog.getOpenFileNames(self, 'Open Directions', '.', '*.tiff;; *.h5;; *.nii')[0]
         if len(filename) > 0:
@@ -132,6 +162,12 @@ class VisualizationWidget(QWidget):
             except ValueError as e:
                 QMessageBox.critical(self, 'Error',
                                      f'Could not load directions. Check your input files. Error message:\n{e}')
+
+    def open_parameter_map(self):
+        filename = QFileDialog.getOpenFileName(self, 'Open Parameter Map', '.', '*.tiff;; *.h5;; *.nii')[0]
+        if len(filename) > 0:
+            self.image = SLIX.io.imread(filename)
+            self.parameter_map_tab_button_generate.setEnabled(True)
 
     def open_saturation_weighting(self):
         filename = QFileDialog.getOpenFileName(self, 'Open Saturation weight', '.', '*.tiff;; *.h5;; *.nii')[0]
@@ -163,6 +199,14 @@ class VisualizationWidget(QWidget):
         except ValueError as e:
             QMessageBox.critical(self, 'Error', f'Could not generate FOM. Check your input files.\n'
                                                 f'Error message:\n{e}')
+
+    def generate_parameter_map(self):
+        colormap = matplotlib.cm.get_cmap(self.parameter_map_color_map.currentText())
+        shown_image = self.image.copy()
+        shown_image = shown_image.astype(numpy.float32)
+        shown_image = (shown_image - shown_image.min()) / (shown_image.max() - shown_image.min())
+        shown_image = colormap(shown_image)
+        self.image_widget.set_image(convert_numpy_to_qimage(shown_image))
 
     def save_fom(self):
         filename, datatype = QFileDialog.getSaveFileName(self, 'Save FOM', '.', '*.tiff;; *.h5')
