@@ -239,5 +239,4 @@ class VisualizationWidget(QWidget):
             shown_image = (shown_image - shown_image.min()) / (shown_image.max() - shown_image.min())
             shown_image = colormap(shown_image)
             shown_image = (255 * shown_image[:, :, :3]).astype(numpy.uint8)
-            shown_image = numpy.moveaxis(shown_image, -1, 0)
             SLIX.io.imwrite_rgb(filename, shown_image)
