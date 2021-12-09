@@ -355,23 +355,28 @@ class VisualizationWidget(QWidget):
         else:
             value_weighting = None
 
-        if self.vector_checkbox_activate_distribution.isChecked():
-            SLIX.visualization.unit_vector_distribution(UnitX, UnitY,
-                                                        thinout=thinout,
-                                                        alpha=alpha,
-                                                        scale=scale,
-                                                        vector_width=vector_width,
-                                                        colormap=color_map,
-                                                        weighting=value_weighting)
-        else:
-            SLIX.visualization.unit_vectors(UnitX, UnitY,
-                                            thinout=thinout,
-                                            alpha=alpha,
-                                            scale=scale,
-                                            vector_width=vector_width,
-                                            background_threshold=threshold,
-                                            colormap=color_map,
-                                            weighting=value_weighting)
+        try:
+            if self.vector_checkbox_activate_distribution.isChecked():
+                SLIX.visualization.unit_vector_distribution(UnitX, UnitY,
+                                                            thinout=thinout,
+                                                            alpha=alpha,
+                                                            scale=scale,
+                                                            vector_width=vector_width,
+                                                            colormap=color_map,
+                                                            weighting=value_weighting)
+            else:
+                SLIX.visualization.unit_vectors(UnitX, UnitY,
+                                                thinout=thinout,
+                                                alpha=alpha,
+                                                scale=scale,
+                                                vector_width=vector_width,
+                                                background_threshold=threshold,
+                                                colormap=color_map,
+                                                weighting=value_weighting)
+        except ValueError as e:
+            QMessageBox.critical(self, 'Error', f'Could not generate vector. Check your input files.\n'
+                                                f'Error message:\n{e}')
+            return
 
         # Set dpi
         plt.gcf().set_dpi(self.vector_tab_dpi_parameter.value())
