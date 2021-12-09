@@ -243,24 +243,26 @@ class ParameterGeneratorWidget(QWidget):
         self.setup_ui_sidebar()
         self.setup_ui_image_widget()
 
-        self.layout.addWidget(self.image_widget, stretch=5)
-        self.layout.addLayout(self.sidebar, stretch=1)
+        self.layout.addWidget(self.image_widget, stretch=7)
+        self.layout.addLayout(self.sidebar, stretch=2)
 
     def setup_ui_sidebar(self):
         self.sidebar = QVBoxLayout()
 
-        self.sidebar_button_open_measurement = QPushButton("Open Measurement")
+        self.sidebar.addWidget(QLabel("<b>Open:</b>"))
+        self.sidebar_button_open_measurement = QPushButton(" Measurement")
         self.sidebar_button_open_measurement.clicked.connect(self.open_measurement)
         self.sidebar.addWidget(self.sidebar_button_open_measurement)
 
-        self.sidebar_button_open_folder = QPushButton("Open Folder")
+        self.sidebar_button_open_folder = QPushButton("Folder")
         self.sidebar_button_open_folder.clicked.connect(self.open_folder)
         self.sidebar.addWidget(self.sidebar_button_open_folder)
 
         self.sidebar.addStretch(5)
 
+        self.sidebar.addWidget(QLabel("<b>Filtering:</b>"))
         # Set filtering algorithm
-        self.sidebar_checkbox_filtering = QCheckBox("Filtering")
+        self.sidebar_checkbox_filtering = QCheckBox("Enable")
         self.sidebar_checkbox_filtering.setChecked(False)
         self.sidebar.addWidget(self.sidebar_checkbox_filtering)
         self.sidebar_filtering_algorithm = QComboBox()

@@ -52,8 +52,8 @@ class VisualizationWidget(QWidget):
 
         self.setup_ui_image_widget()
 
-        self.layout.addWidget(self.image_widget, stretch=5)
-        self.layout.addLayout(self.sidebar, stretch=1)
+        self.layout.addWidget(self.image_widget, stretch=7)
+        self.layout.addLayout(self.sidebar, stretch=2)
         self.setLayout(self.layout)
 
     def setup_fom_tab(self):
@@ -130,6 +130,7 @@ class VisualizationWidget(QWidget):
         for cmap in matplotlib.cm.cmap_d.keys():
             self.parameter_map_color_map.addItem(cmap)
         parameter_map_tab.layout.addWidget(self.parameter_map_color_map)
+        self.parameter_map_color_map.setEnabled(False)
         self.parameter_map_color_map.currentIndexChanged.connect(self.generate_parameter_map)
 
         self.parameter_map_tab_button_save = QPushButton("Save preview")
@@ -147,6 +148,7 @@ class VisualizationWidget(QWidget):
         if len(filename) > 0:
             try:
                 direction_image = None
+                filename.sort()
                 for file in filename:
                     single_direction_image = SLIX.io.imread(file)
                     if direction_image is None:
@@ -172,6 +174,7 @@ class VisualizationWidget(QWidget):
         if len(filename) > 0:
             self.parameter_map = SLIX.io.imread(filename)
             self.parameter_map_tab_button_save.setEnabled(True)
+            self.parameter_map_color_map.setEnabled(True)
             self.generate_parameter_map()
 
     def open_saturation_weighting(self):
@@ -197,7 +200,7 @@ class VisualizationWidget(QWidget):
 
         try:
             self.fom = SLIX.visualization.direction(self.directions, saturation=saturation_weighting,
-                                                      value=value_weighting, colormap=color_map)
+                                                    value=value_weighting, colormap=color_map)
 
             self.image_widget.set_image(convert_numpy_to_qimage(self.fom))
             self.fom_tab_save_button.setEnabled(True)
@@ -211,6 +214,8 @@ class VisualizationWidget(QWidget):
         shown_image = shown_image.astype(numpy.float32)
         shown_image = (shown_image - shown_image.min()) / (shown_image.max() - shown_image.min())
         shown_image = colormap(shown_image)
+        # Convert NumPy RGBA array to RGB array
+        shown_image = shown_image[:, :, :3]
         self.image_widget.set_image(convert_numpy_to_qimage(shown_image))
 
     def save_fom(self):
@@ -234,5 +239,5 @@ class VisualizationWidget(QWidget):
             shown_image = (shown_image - shown_image.min()) / (shown_image.max() - shown_image.min())
             shown_image = colormap(shown_image)
             shown_image = (255 * shown_image[:, :, :3]).astype(numpy.uint8)
+            shown_image = numpy.moveaxis(shown_image, -1, 0)
             SLIX.io.imwrite_rgb(filename, shown_image)
-
