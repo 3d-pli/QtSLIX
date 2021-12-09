@@ -20,7 +20,6 @@ class VisualizationWidget(QWidget):
         self.sidebar_tabbar = None
         self.image_widget = None
         self.filename = None
-        self.color_map = None
 
         self.parameter_map = None
         self.parameter_map_color_map = None
@@ -33,6 +32,7 @@ class VisualizationWidget(QWidget):
         self.fom_checkbox_weight_value = None
         self.fom_tab_button_generate = None
         self.fom_tab_save_button = None
+        self.fom_color_map = None
         self.saturation_weighting = None
         self.value_weighting = None
 
@@ -49,6 +49,7 @@ class VisualizationWidget(QWidget):
         self.vector_tab_threshold_parameter = None
         self.vector_background = None
         self.vector_weighting = None
+        self.vector_color_map = None
 
         self.setup_ui()
 
@@ -82,10 +83,10 @@ class VisualizationWidget(QWidget):
         fom_tab.layout.addStretch(3)
 
         fom_tab.layout.addWidget(QLabel("Color map:"))
-        self.color_map = QComboBox()
+        self.fom_color_map = QComboBox()
         for cmap in SLIX._cmd.VisualizeParameter.available_colormaps.keys():
-            self.color_map.addItem(cmap)
-        fom_tab.layout.addWidget(self.color_map)
+            self.fom_color_map.addItem(cmap)
+        fom_tab.layout.addWidget(self.fom_color_map)
 
         fom_tab.layout.addStretch(1)
 
@@ -140,10 +141,10 @@ class VisualizationWidget(QWidget):
 
         vector_tab.layout.addWidget(QLabel("<b>Options:</b>"))
         vector_tab.layout.addWidget(QLabel("Color map:"))
-        self.color_map = QComboBox()
+        self.vector_color_map = QComboBox()
         for cmap in SLIX._cmd.VisualizeParameter.available_colormaps.keys():
-            self.color_map.addItem(cmap)
-        vector_tab.layout.addWidget(self.color_map)
+            self.vector_color_map.addItem(cmap)
+        vector_tab.layout.addWidget(self.vector_color_map)
 
         self.vector_checkbox_weight_value = QCheckBox("Weight Vector Length")
         self.vector_checkbox_weight_value.setChecked(False)
@@ -317,7 +318,7 @@ class VisualizationWidget(QWidget):
             value_weighting = self.value_weighting
         else:
             value_weighting = None
-        color_map = SLIX._cmd.VisualizeParameter.available_colormaps[self.color_map.currentText()]
+        color_map = SLIX._cmd.VisualizeParameter.available_colormaps[self.fom_color_map.currentText()]
 
         try:
             self.fom = SLIX.visualization.direction(self.directions, saturation=saturation_weighting,
@@ -340,7 +341,7 @@ class VisualizationWidget(QWidget):
 
         # Generate unit vectors from direction images
         UnitX, UnitY = SLIX.toolbox.unit_vectors(self.directions, use_gpu=False)
-        color_map = SLIX._cmd.VisualizeParameter.available_colormaps[self.color_map.currentText()]
+        color_map = SLIX._cmd.VisualizeParameter.available_colormaps[self.vector_color_map.currentText()]
 
         alpha = self.vector_tab_alpha_parameter.value()
         thinout = int(self.vector_tab_thinout_parameter.value())

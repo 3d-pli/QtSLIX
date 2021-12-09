@@ -19,7 +19,7 @@ class ParameterGeneratorWorker(QObject):
 
     def __init__(self, filename, image, output_folder, filtering, filtering_parm_1, filtering_parm_2,
                  use_gpu, detailed, min, max, avg, direction, nc_direction, peaks,
-                 peak_width, peak_distance, peak_prominence):
+                 peak_width, peak_distance, peak_prominence, dir_correction):
         super().__init__()
         self.filename = filename
         self.image = image
@@ -38,6 +38,7 @@ class ParameterGeneratorWorker(QObject):
         self.filtering = filtering
         self.filtering_parameter_1 = filtering_parm_1
         self.filtering_parameter_2 = filtering_parm_2
+        self.dir_correction = dir_correction
 
     def process(self):
         output_data_type = ".tiff"
@@ -141,7 +142,8 @@ class ParameterGeneratorWorker(QObject):
             return
         if self.direction:
             self.currentStep.emit("Generating direction...")
-            direction = SLIX.toolbox.direction(peaks, centroids, use_gpu=gpu, number_of_directions=3, return_numpy=True)
+            direction = SLIX.toolbox.direction(peaks, centroids, use_gpu=gpu, number_of_directions=3,
+                                               correction_angle=self.dir_correction, return_numpy=True)
             for dim in range(direction.shape[-1]):
                 SLIX.io.imwrite(f'{output_path_name}_dir_{dim + 1}'
                                 f'{output_data_type}',
@@ -227,6 +229,7 @@ class ParameterGeneratorWidget(QWidget):
         self.sidebar_checkbox_peaks = None
         self.sidebar_checkbox_detailed = None
         self.sidebar_checkbox_use_gpu = None
+        self.sidebar_dir_correction_parameter = None
         self.sidebar_button_generate = None
         self.image_widget = None
 
@@ -333,6 +336,14 @@ class ParameterGeneratorWidget(QWidget):
 
         self.sidebar.addWidget(QLabel("<b>Other options:</b>"))
 
+        self.sidebar.addWidget(QLabel("Correction direction (°):"))
+        self.sidebar_dir_correction_parameter = QDoubleSpinBox()
+        self.sidebar_dir_correction_parameter.setRange(0, 180)
+        self.sidebar_dir_correction_parameter.setSingleStep(0.1)
+        self.sidebar_dir_correction_parameter.setValue(0)
+        self.sidebar_dir_correction_parameter.setDecimals(2)
+        self.sidebar.addWidget(self.sidebar_dir_correction_parameter)
+
         self.sidebar_checkbox_detailed = QCheckBox("Detailed")
         self.sidebar_checkbox_detailed.setChecked(False)
         self.sidebar.addWidget(self.sidebar_checkbox_detailed)
@@ -406,7 +417,8 @@ class ParameterGeneratorWidget(QWidget):
                                           self.sidebar_checkbox_peaks.isChecked(),
                                           self.sidebar_checkbox_peak_width.isChecked(),
                                           self.sidebar_checkbox_peak_distance.isChecked(),
-                                          self.sidebar_checkbox_peak_prominence.isChecked())
+                                          self.sidebar_checkbox_peak_prominence.isChecked(),
+                                          self.sidebar_dir_correction_parameter.value())
         worker.currentStep.connect(dialog.setLabelText)
         worker.finishedWork.connect(worker_thread.quit)
         worker.moveToThread(worker_thread)
