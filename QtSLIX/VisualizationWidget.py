@@ -26,11 +26,15 @@ class VisualizationWidget(QWidget):
         self.parameter_map_color_map = None
         self.parameter_map_tab_button_save = None
 
+        self.directions = None
+
         self.fom = None
         self.fom_checkbox_weight_saturation = None
         self.fom_checkbox_weight_value = None
         self.fom_tab_button_generate = None
         self.fom_tab_save_button = None
+        self.saturation_weighting = None
+        self.value_weighting = None
 
         self.vector_field = None
         self.vector_checkbox_weight_value = None
@@ -43,10 +47,8 @@ class VisualizationWidget(QWidget):
         self.vector_tab_save_button = None
         self.vector_checkbox_activate_distribution = None
         self.vector_tab_threshold_parameter = None
-
-        self.directions = None
-        self.saturation_weighting = None
-        self.value_weighting = None
+        self.vector_background = None
+        self.vector_weighting = None
 
         self.setup_ui()
 
@@ -293,10 +295,18 @@ class VisualizationWidget(QWidget):
             self.value_weighting = SLIX.io.imread(filename)
 
     def open_vector_background(self):
-        pass
+        filename = QFileDialog.getOpenFileName(self, 'Open Background Image', '.', '*.tiff;; *.h5;; *.nii')[0]
+        if len(filename) > 0:
+            self.vector_background = SLIX.io.imread(filename)
+            while len(self.vector_background.shape) > 2:
+                self.vector_background = numpy.mean(self.vector_background, axis=-1)
 
     def open_vector_weighting(self):
-        pass
+        filename = QFileDialog.getOpenFileName(self, 'Open Weight for vector', '.', '*.tiff;; *.h5;; *.nii')[0]
+        if len(filename) > 0:
+            self.vector_weighting = SLIX.io.imread(filename)
+            self.vector_weighting = (self.vector_weighting - self.vector_weighting.min()) / (
+                    numpy.percentile(self.vector_weighting, 99) - self.vector_weighting.min())
 
     def generate_fom(self):
         if self.fom_checkbox_weight_saturation.isChecked():
@@ -338,13 +348,21 @@ class VisualizationWidget(QWidget):
         vector_width = self.vector_tab_vector_width_parameter.value()
         threshold = self.vector_tab_threshold_parameter.value()
 
+        if self.vector_background is not None:
+            plt.imshow(self.vector_background, cmap='gray')
+        if self.vector_checkbox_weight_value.isChecked():
+            value_weighting = self.vector_weighting
+        else:
+            value_weighting = None
+
         if self.vector_checkbox_activate_distribution.isChecked():
             SLIX.visualization.unit_vector_distribution(UnitX, UnitY,
                                                         thinout=thinout,
                                                         alpha=alpha,
                                                         scale=scale,
                                                         vector_width=vector_width,
-                                                        colormap=color_map)
+                                                        colormap=color_map,
+                                                        weighting=value_weighting)
         else:
             SLIX.visualization.unit_vectors(UnitX, UnitY,
                                             thinout=thinout,
@@ -352,7 +370,8 @@ class VisualizationWidget(QWidget):
                                             scale=scale,
                                             vector_width=vector_width,
                                             background_threshold=threshold,
-                                            colormap=color_map)
+                                            colormap=color_map,
+                                            weighting=value_weighting)
 
         # Set dpi
         plt.gcf().set_dpi(self.vector_tab_dpi_parameter.value())
@@ -384,7 +403,12 @@ class VisualizationWidget(QWidget):
             SLIX.io.imwrite_rgb(filename, self.fom)
 
     def save_vector(self):
-        pass
+        filename, datatype = QFileDialog.getSaveFileName(self, 'Save Vector Image', '.', '*.tiff;; *.h5')
+        if len(filename) > 0:
+            datatype = datatype[1:]
+            if not filename.endswith(datatype):
+                filename += datatype
+            SLIX.io.imwrite_rgb(filename, self.vector_field)
 
     def save_parameter_map(self):
         filename, datatype = QFileDialog.getSaveFileName(self, 'Save Parameter Map', '.', '*.tiff;; *.h5')
