@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, \
-    QFileDialog, QCheckBox, QPushButton, QProgressDialog, QSizePolicy, QComboBox, QDoubleSpinBox, QLabel
+    QFileDialog, QCheckBox, QPushButton, QProgressDialog, QSizePolicy, QComboBox, QDoubleSpinBox, QLabel, QMessageBox
 from PyQt5.QtCore import QCoreApplication, QObject, QThread, pyqtSignal, QLocale
 
 from .ImageWidget import ImageWidget, convert_numpy_to_qimage
@@ -22,6 +22,8 @@ class ParameterGeneratorWorker(QObject):
     finishedWork = pyqtSignal()
     # Signal to inform the ParameterGeneratorWidget what step the worker is currently working on
     currentStep = pyqtSignal(str)
+    # Error message
+    errorMessage = pyqtSignal(str)
 
     def __init__(self, filename: str, image: numpy.array,
                  output_folder: str, filtering: str,
@@ -114,164 +116,172 @@ class ParameterGeneratorWorker(QObject):
         detailed = self.detailed
         detailed_str = "_detailed" if detailed else ""
 
-        # If the thread is stopped, return
-        if QThread.currentThread().isInterruptionRequested():
-            self.finishedWork.emit()
-            return
+        try:
+            # If the thread is stopped, return
+            if QThread.currentThread().isInterruptionRequested():
+                self.finishedWork.emit()
+                return
 
-        # Apply filtering
-        if self.filtering != "None":
-            self.currentStep.emit(f"Filtering: {self.filtering} "
-                                  f"{self.filtering_parameter_1} "
-                                  f"{self.filtering_parameter_2}")
-            if self.filtering == "Fourier":
-                self.image = SLIX.preparation.low_pass_fourier_smoothing(self.image,
-                                                                         self.filtering_parameter_1,
-                                                                         self.filtering_parameter_2)
-            elif self.filtering == "Savitzky-Golay":
-                self.image = SLIX.preparation.savitzky_golay_smoothing(self.image,
-                                                                       self.filtering_parameter_1,
-                                                                       self.filtering_parameter_2)
+            # Apply filtering
+            if self.filtering != "None":
+                self.currentStep.emit(f"Filtering: {self.filtering} "
+                                      f"{self.filtering_parameter_1} "
+                                      f"{self.filtering_parameter_2}")
+                if self.filtering == "Fourier":
+                    self.image = SLIX.preparation.low_pass_fourier_smoothing(self.image,
+                                                                             self.filtering_parameter_1,
+                                                                             self.filtering_parameter_2)
+                elif self.filtering == "Savitzky-Golay":
+                    self.image = SLIX.preparation.savitzky_golay_smoothing(self.image,
+                                                                           self.filtering_parameter_1,
+                                                                           self.filtering_parameter_2)
 
-        if QThread.currentThread().isInterruptionRequested():
-            self.finishedWork.emit()
-            return
-        # Generate minima image
-        if self.min:
-            self.currentStep.emit("Generating minima...")
-            min_img = numpy.min(self.image, axis=-1)
-            SLIX.io.imwrite(f'{output_path_name}_min'
-                            f'{output_data_type}', min_img)
+            if QThread.currentThread().isInterruptionRequested():
+                self.finishedWork.emit()
+                return
+            # Generate minima image
+            if self.min:
+                self.currentStep.emit("Generating minima...")
+                min_img = numpy.min(self.image, axis=-1)
+                SLIX.io.imwrite(f'{output_path_name}_min'
+                                f'{output_data_type}', min_img)
 
-        if QThread.currentThread().isInterruptionRequested():
-            self.finishedWork.emit()
-            return
-        # Generate maxima image
-        if self.max:
-            self.currentStep.emit("Generating maxima...")
-            max_img = numpy.max(self.image, axis=-1)
-            SLIX.io.imwrite(f'{output_path_name}_max'
-                            f'{output_data_type}', max_img)
+            if QThread.currentThread().isInterruptionRequested():
+                self.finishedWork.emit()
+                return
+            # Generate maxima image
+            if self.max:
+                self.currentStep.emit("Generating maxima...")
+                max_img = numpy.max(self.image, axis=-1)
+                SLIX.io.imwrite(f'{output_path_name}_max'
+                                f'{output_data_type}', max_img)
 
-        if QThread.currentThread().isInterruptionRequested():
-            self.finishedWork.emit()
-            return
-        # Generate average image
-        if self.avg:
-            self.currentStep.emit("Generating average...")
-            avg_img = numpy.mean(self.image, axis=-1)
-            SLIX.io.imwrite(f'{output_path_name}_avg'
-                            f'{output_data_type}', avg_img)
+            if QThread.currentThread().isInterruptionRequested():
+                self.finishedWork.emit()
+                return
+            # Generate average image
+            if self.avg:
+                self.currentStep.emit("Generating average...")
+                avg_img = numpy.mean(self.image, axis=-1)
+                SLIX.io.imwrite(f'{output_path_name}_avg'
+                                f'{output_data_type}', avg_img)
 
-        if QThread.currentThread().isInterruptionRequested():
-            self.finishedWork.emit()
-            return
-        # The following steps require the significant peaks of the measurement ...
-        self.currentStep.emit("Generating significant peaks...")
-        peaks = SLIX.toolbox.significant_peaks(self.image, use_gpu=gpu, return_numpy=True)
+            if QThread.currentThread().isInterruptionRequested():
+                self.finishedWork.emit()
+                return
+            # The following steps require the significant peaks of the measurement ...
+            self.currentStep.emit("Generating significant peaks...")
+            peaks = SLIX.toolbox.significant_peaks(self.image, use_gpu=gpu, return_numpy=True)
 
-        if QThread.currentThread().isInterruptionRequested():
-            self.finishedWork.emit()
-            return
-        # ... as well as the centroids
-        self.currentStep.emit("Generating centroids...")
-        centroids = SLIX.toolbox.centroid_correction(self.image, peaks, use_gpu=gpu, return_numpy=True)
+            if QThread.currentThread().isInterruptionRequested():
+                self.finishedWork.emit()
+                return
+            # ... as well as the centroids
+            self.currentStep.emit("Generating centroids...")
+            centroids = SLIX.toolbox.centroid_correction(self.image, peaks, use_gpu=gpu, return_numpy=True)
 
-        if QThread.currentThread().isInterruptionRequested():
-            self.finishedWork.emit()
-            return
-        # Generate all peaks to write low and high prominence peaks
-        if self.peaks:
-            self.currentStep.emit("Generating all peaks...")
-            all_peaks = SLIX.toolbox.peaks(self.image, use_gpu=gpu, return_numpy=True)
-            if not detailed:
-                SLIX.io.imwrite(f'{output_path_name}_high_prominence_peaks'
+            if QThread.currentThread().isInterruptionRequested():
+                self.finishedWork.emit()
+                return
+            # Generate all peaks to write low and high prominence peaks
+            if self.peaks:
+                self.currentStep.emit("Generating all peaks...")
+                all_peaks = SLIX.toolbox.peaks(self.image, use_gpu=gpu, return_numpy=True)
+                if not detailed:
+                    SLIX.io.imwrite(f'{output_path_name}_high_prominence_peaks'
+                                    f'{output_data_type}',
+                                    numpy.sum(peaks, axis=-1,
+                                              dtype=numpy.uint16))
+                    SLIX.io.imwrite(f'{output_path_name}_low_prominence_peaks'
+                                    f'{output_data_type}',
+                                    numpy.sum(all_peaks, axis=-1, dtype=numpy.uint16) -
+                                    numpy.sum(peaks, axis=-1,
+                                              dtype=numpy.uint16))
+                else:
+                    SLIX.io.imwrite(f'{output_path_name}_all_peaks_detailed'
+                                    f'{output_data_type}', all_peaks)
+                    SLIX.io.imwrite(
+                        f'{output_path_name}_high_prominence_peaks_detailed'
+                        f'{output_data_type}',
+                        peaks
+                    )
+
+            if QThread.currentThread().isInterruptionRequested():
+                self.finishedWork.emit()
+                return
+            # Generate the direction images
+            if self.direction:
+                self.currentStep.emit("Generating direction...")
+                direction = SLIX.toolbox.direction(peaks, centroids, use_gpu=gpu, number_of_directions=3,
+                                                   correction_angle=self.dir_correction, return_numpy=True)
+                for dim in range(direction.shape[-1]):
+                    SLIX.io.imwrite(f'{output_path_name}_dir_{dim + 1}'
+                                    f'{output_data_type}',
+                                    direction[:, :, dim])
+                del direction
+
+            if QThread.currentThread().isInterruptionRequested():
+                self.finishedWork.emit()
+                return
+            # Generate the non-crossing direction images
+            if self.nc_direction:
+                self.currentStep.emit("Generating non crossing direction...")
+                nc_direction = SLIX.toolbox.direction(peaks, centroids, use_gpu=gpu,
+                                                      number_of_directions=1, return_numpy=True)
+                SLIX.io.imwrite(f'{output_path_name}_dir'
                                 f'{output_data_type}',
-                                numpy.sum(peaks, axis=-1,
-                                          dtype=numpy.uint16))
-                SLIX.io.imwrite(f'{output_path_name}_low_prominence_peaks'
-                                f'{output_data_type}',
-                                numpy.sum(all_peaks, axis=-1, dtype=numpy.uint16) -
-                                numpy.sum(peaks, axis=-1,
-                                          dtype=numpy.uint16))
-            else:
-                SLIX.io.imwrite(f'{output_path_name}_all_peaks_detailed'
-                                f'{output_data_type}', all_peaks)
-                SLIX.io.imwrite(
-                    f'{output_path_name}_high_prominence_peaks_detailed'
-                    f'{output_data_type}',
-                    peaks
-                )
+                                nc_direction[:, :])
+                del nc_direction
 
-        if QThread.currentThread().isInterruptionRequested():
+            if QThread.currentThread().isInterruptionRequested():
+                self.finishedWork.emit()
+                return
+            # Generate the peak distance
+            if self.peak_distance:
+                self.currentStep.emit("Generating peak distance...")
+                if detailed:
+                    peak_distance = SLIX.toolbox.peak_distance(peaks, centroids, use_gpu=gpu, return_numpy=True)
+                else:
+                    peak_distance = SLIX.toolbox.mean_peak_distance(peaks, centroids, use_gpu=gpu, return_numpy=True)
+                SLIX.io.imwrite(f'{output_path_name}_peakdistance{detailed_str}'
+                                f'{output_data_type}', peak_distance)
+                del peak_distance
+
+            if QThread.currentThread().isInterruptionRequested():
+                self.finishedWork.emit()
+                return
+            # Generate the peak width
+            if self.peak_width:
+                self.currentStep.emit("Generating peak width...")
+                if detailed:
+                    peak_width = SLIX.toolbox.peak_width(self.image, peaks, use_gpu=gpu, return_numpy=True)
+                else:
+                    peak_width = SLIX.toolbox.mean_peak_width(self.image, peaks, use_gpu=gpu)
+                SLIX.io.imwrite(f'{output_path_name}_peakwidth{detailed_str}'
+                                f'{output_data_type}', peak_width)
+                del peak_width
+
+            if QThread.currentThread().isInterruptionRequested():
+                self.finishedWork.emit()
+                return
+            # Generate the peak prominence
+            if self.peak_prominence:
+                self.currentStep.emit("Generating peak prominence...")
+                if detailed:
+                    prominence = SLIX.toolbox.peak_prominence(self.image, peaks, use_gpu=gpu, return_numpy=True)
+                else:
+                    prominence = SLIX.toolbox.mean_peak_prominence(self.image, peaks, use_gpu=gpu, return_numpy=True)
+                SLIX.io.imwrite(f'{output_path_name}_peakprominence{detailed_str}'
+                                f'{output_data_type}', prominence)
+                del prominence
+        except cupy.cuda.memory.OutOfMemoryError as e:
+            self.errorMessage.emit("cupy.cuda.memory.OutOfMemoryError: Ran out of memory during computation. "
+                                   "Please disable the GPU option.")
+            if self.gpu:
+                mempool = cupy.get_default_memory_pool()
+                mempool.free_all_blocks()
             self.finishedWork.emit()
             return
-        # Generate the direction images
-        if self.direction:
-            self.currentStep.emit("Generating direction...")
-            direction = SLIX.toolbox.direction(peaks, centroids, use_gpu=gpu, number_of_directions=3,
-                                               correction_angle=self.dir_correction, return_numpy=True)
-            for dim in range(direction.shape[-1]):
-                SLIX.io.imwrite(f'{output_path_name}_dir_{dim + 1}'
-                                f'{output_data_type}',
-                                direction[:, :, dim])
-            del direction
-
-        if QThread.currentThread().isInterruptionRequested():
-            self.finishedWork.emit()
-            return
-        # Generate the non-crossing direction images
-        if self.nc_direction:
-            self.currentStep.emit("Generating non crossing direction...")
-            nc_direction = SLIX.toolbox.direction(peaks, centroids, use_gpu=gpu,
-                                                  number_of_directions=1, return_numpy=True)
-            SLIX.io.imwrite(f'{output_path_name}_dir'
-                            f'{output_data_type}',
-                            nc_direction[:, :])
-            del nc_direction
-
-        if QThread.currentThread().isInterruptionRequested():
-            self.finishedWork.emit()
-            return
-        # Generate the peak distance
-        if self.peak_distance:
-            self.currentStep.emit("Generating peak distance...")
-            if detailed:
-                peak_distance = SLIX.toolbox.peak_distance(peaks, centroids, use_gpu=gpu, return_numpy=True)
-            else:
-                peak_distance = SLIX.toolbox.mean_peak_distance(peaks, centroids, use_gpu=gpu, return_numpy=True)
-            SLIX.io.imwrite(f'{output_path_name}_peakdistance{detailed_str}'
-                            f'{output_data_type}', peak_distance)
-            del peak_distance
-
-        if QThread.currentThread().isInterruptionRequested():
-            self.finishedWork.emit()
-            return
-        # Generate the peak width
-        if self.peak_width:
-            self.currentStep.emit("Generating peak width...")
-            if detailed:
-                peak_width = SLIX.toolbox.peak_width(self.image, peaks, use_gpu=gpu, return_numpy=True)
-            else:
-                peak_width = SLIX.toolbox.mean_peak_width(self.image, peaks, use_gpu=gpu)
-            SLIX.io.imwrite(f'{output_path_name}_peakwidth{detailed_str}'
-                            f'{output_data_type}', peak_width)
-            del peak_width
-
-        if QThread.currentThread().isInterruptionRequested():
-            self.finishedWork.emit()
-            return
-        # Generate the peak prominence
-        if self.peak_prominence:
-            self.currentStep.emit("Generating peak prominence...")
-            if detailed:
-                prominence = SLIX.toolbox.peak_prominence(self.image, peaks, use_gpu=gpu, return_numpy=True)
-            else:
-                prominence = SLIX.toolbox.mean_peak_prominence(self.image, peaks, use_gpu=gpu, return_numpy=True)
-            SLIX.io.imwrite(f'{output_path_name}_peakprominence{detailed_str}'
-                            f'{output_data_type}', prominence)
-            del prominence
-
         # Tell connected components that we are done
         self.finishedWork.emit()
 
@@ -495,10 +505,23 @@ class ParameterGeneratorWidget(QWidget):
 
         self.filename = folder
         self.image = SLIX.io.imread(folder)
+        # Couldn't read any image from the folder
+        if self.image is None:
+            QMessageBox.warning(self, "Error", "Couldn't read any image from the folder.")
+            return
         self.sidebar_button_generate.setEnabled(True)
 
         if self.image_widget:
             self.image_widget.set_image(convert_numpy_to_qimage(self.image))
+
+    def show_error_message(self, message: str) -> None:
+        """
+        Shows an error message.
+
+        Returns:
+            None
+        """
+        QMessageBox.warning(self, "Error", message)
 
     def generate(self) -> None:
         """
@@ -544,6 +567,7 @@ class ParameterGeneratorWidget(QWidget):
         # Update the progress bar whenever a step is finished
         worker.currentStep.connect(dialog.setLabelText)
         worker.finishedWork.connect(worker_thread.quit)
+        worker.errorMessage.connect(self.show_error_message)
         worker.moveToThread(worker_thread)
         # Show the progress bar
         dialog.show()
