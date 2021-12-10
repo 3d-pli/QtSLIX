@@ -11,6 +11,10 @@ from matplotlib import pyplot as plt
 
 
 class VisualizationWidget(QWidget):
+    """
+    This class is the main widget for the visualization of the SLIX data.
+    """
+
     def __init__(self):
         super().__init__()
         self.setLocale(QLocale(QLocale.English, QLocale.UnitedStates))
@@ -53,11 +57,23 @@ class VisualizationWidget(QWidget):
 
         self.setup_ui()
 
-    def setup_ui_image_widget(self):
+    def setup_ui_image_widget(self) -> None:
+        """
+        This method sets up the image widget.
+
+        Returns:
+            None
+        """
         self.image_widget = ImageWidget()
         self.image_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-    def setup_ui(self):
+    def setup_ui(self) -> None:
+        """
+        This method sets up the main widget.
+
+        Returns:
+            None
+        """
         self.layout = QHBoxLayout()
         self.sidebar = QVBoxLayout()
         self.sidebar_tabbar = QTabWidget()
@@ -72,7 +88,13 @@ class VisualizationWidget(QWidget):
         self.layout.addLayout(self.sidebar, stretch=2)
         self.setLayout(self.layout)
 
-    def setup_fom_tab(self):
+    def setup_fom_tab(self) -> QWidget:
+        """
+        This method sets up the FOM tab.
+
+        Returns:
+            QWidget: The FOM tab.
+        """
         fom_tab = QWidget()
         fom_tab.layout = QVBoxLayout()
 
@@ -125,7 +147,13 @@ class VisualizationWidget(QWidget):
         fom_tab.setLayout(fom_tab.layout)
         return fom_tab
 
-    def setup_vector_tab(self):
+    def setup_vector_tab(self) -> QWidget:
+        """
+        This method sets up the vector tab.
+
+        Returns:
+            QWidget: The vector tab.
+        """
         vector_tab = QWidget()
         vector_tab.layout = QVBoxLayout()
 
@@ -224,7 +252,13 @@ class VisualizationWidget(QWidget):
         vector_tab.setLayout(vector_tab.layout)
         return vector_tab
 
-    def setup_parameter_map_tab(self):
+    def setup_parameter_map_tab(self) -> QWidget:
+        """
+        Set up the parameter map tab.
+
+        Returns:
+            QWidget: The parameter map tab.
+        """
         parameter_map_tab = QWidget()
         parameter_map_tab.layout = QVBoxLayout()
 
@@ -250,76 +284,136 @@ class VisualizationWidget(QWidget):
         parameter_map_tab.setLayout(parameter_map_tab.layout)
         return parameter_map_tab
 
-    def open_direction(self):
+    def open_direction(self) -> None:
+        """
+        Open one or more direction files.
+
+        Returns:
+            None
+        """
         filename = QFileDialog.getOpenFileNames(self, 'Open Directions', '.', '*.tiff;; *.h5;; *.nii')[0]
-        if len(filename) > 0:
-            try:
-                direction_image = None
-                filename.sort()
-                for file in filename:
-                    single_direction_image = SLIX.io.imread(file)
-                    if direction_image is None:
-                        direction_image = single_direction_image
+        if len(filename) == 0:
+            return
+
+        try:
+            direction_image = None
+            filename.sort()
+            for file in filename:
+                # Arrange the direction images in a NumPy stack
+                single_direction_image = SLIX.io.imread(file)
+                if direction_image is None:
+                    direction_image = single_direction_image
+                else:
+                    if len(direction_image.shape) == 2:
+                        direction_image = numpy.stack((direction_image,
+                                                       single_direction_image),
+                                                      axis=-1)
                     else:
-                        if len(direction_image.shape) == 2:
-                            direction_image = numpy.stack((direction_image,
-                                                           single_direction_image),
-                                                          axis=-1)
-                        else:
-                            direction_image = numpy.concatenate((direction_image,
-                                                                 single_direction_image
-                                                                 [:, :, numpy.newaxis]),
-                                                                axis=-1)
-                self.directions = direction_image
-                self.fom_tab_button_generate.setEnabled(True)
-                self.vector_tab_button_generate.setEnabled(True)
-            except ValueError as e:
-                QMessageBox.critical(self, 'Error',
-                                     f'Could not load directions. Check your input files. Error message:\n{e}')
+                        direction_image = numpy.concatenate((direction_image,
+                                                             single_direction_image
+                                                             [:, :, numpy.newaxis]),
+                                                            axis=-1)
+            self.directions = direction_image
+            self.fom_tab_button_generate.setEnabled(True)
+            self.vector_tab_button_generate.setEnabled(True)
+        except ValueError as e:
+            QMessageBox.critical(self, 'Error',
+                                 f'Could not load directions. Check your input files. Error message:\n{e}')
 
-    def open_parameter_map(self):
+    def open_parameter_map(self) -> None:
+        """
+        Open a parameter map.
+
+        Returns:
+            None
+        """
         filename = QFileDialog.getOpenFileName(self, 'Open Parameter Map', '.', '*.tiff;; *.h5;; *.nii')[0]
-        if len(filename) > 0:
-            self.parameter_map = SLIX.io.imread(filename)
-            self.parameter_map_tab_button_save.setEnabled(True)
-            self.parameter_map_color_map.setEnabled(True)
-            self.generate_parameter_map()
+        if len(filename) == 0:
+            return
 
-    def open_saturation_weighting(self):
+        self.parameter_map = SLIX.io.imread(filename)
+        self.parameter_map_tab_button_save.setEnabled(True)
+        self.parameter_map_color_map.setEnabled(True)
+        self.generate_parameter_map()
+
+    def open_saturation_weighting(self) -> None:
+        """
+        Open a saturation weighting map.
+
+        Returns:
+            None
+        """
         filename = QFileDialog.getOpenFileName(self, 'Open Saturation weight', '.', '*.tiff;; *.h5;; *.nii')[0]
-        if len(filename) > 0:
-            self.saturation_weighting = SLIX.io.imread(filename)
+        if len(filename) == 0:
+            return
+        self.saturation_weighting = SLIX.io.imread(filename)
 
-    def open_value_weighting(self):
+    def open_value_weighting(self) -> None:
+        """
+        Open a value weighting map.
+
+        Returns:
+            None
+        """
         filename = QFileDialog.getOpenFileName(self, 'Open Value weight', '.', '*.tiff;; *.h5;; *.nii')[0]
-        if len(filename) > 0:
-            self.value_weighting = SLIX.io.imread(filename)
+        if len(filename) == 0:
+            return
+        self.value_weighting = SLIX.io.imread(filename)
 
-    def open_vector_background(self):
+    def open_vector_background(self) -> None:
+        """
+        Open a vector background map.
+
+        Returns:
+            None
+        """
         filename = QFileDialog.getOpenFileName(self, 'Open Background Image', '.', '*.tiff;; *.h5;; *.nii')[0]
-        if len(filename) > 0:
-            self.vector_background = SLIX.io.imread(filename)
-            while len(self.vector_background.shape) > 2:
-                self.vector_background = numpy.mean(self.vector_background, axis=-1)
+        if len(filename) == 0:
+            return
+        self.vector_background = SLIX.io.imread(filename)
+        while len(self.vector_background.shape) > 2:
+            self.vector_background = numpy.mean(self.vector_background, axis=-1)
 
-    def open_vector_weighting(self):
+    def open_vector_weighting(self) -> None:
+        """
+        Open a vector weighting map.
+
+        Returns:
+            None
+        """
         filename = QFileDialog.getOpenFileName(self, 'Open Weight for vector', '.', '*.tiff;; *.h5;; *.nii')[0]
-        if len(filename) > 0:
-            self.vector_weighting = SLIX.io.imread(filename)
-            self.vector_weighting = (self.vector_weighting - self.vector_weighting.min()) / (
-                    numpy.percentile(self.vector_weighting, 99) - self.vector_weighting.min())
+        if len(filename) == 0:
+            return
+        # Open and normalize the weighting image
+        self.vector_weighting = SLIX.io.imread(filename)
+        self.vector_weighting = (self.vector_weighting - self.vector_weighting.min()) / (
+                numpy.percentile(self.vector_weighting, 99) - self.vector_weighting.min())
 
-    def generate_fom(self):
+    def generate_fom(self) -> None:
+        """
+        Generate fiber orientation map based on the current settings.
+        The generated FOM is saved in the self.fom attribute and will be
+        shown to the user in the image viewer.
+
+        Returns:
+             None
+        """
+        # If the FOM should be weighted by the saturation weighting,
+        # set the parameter saturation_weighting to the loaded image
         if self.fom_checkbox_weight_saturation.isChecked():
             saturation_weighting = self.saturation_weighting
+        # If not, set it to None disabling any weighting.
         else:
             saturation_weighting = None
+        # Repeat for value channel
         if self.fom_checkbox_weight_value.isChecked():
             value_weighting = self.value_weighting
         else:
             value_weighting = None
+        # Get the color map which will be used in the FOM generation method.
         color_map = SLIX._cmd.VisualizeParameter.available_colormaps[self.fom_color_map.currentText()]
 
+        # Try to generate the FOM. If it fails, show an error message.
         try:
             self.fom = SLIX.visualization.direction(self.directions, saturation=saturation_weighting,
                                                     value=value_weighting, colormap=color_map)
@@ -330,7 +424,14 @@ class VisualizationWidget(QWidget):
             QMessageBox.critical(self, 'Error', f'Could not generate FOM. Check your input files.\n'
                                                 f'Error message:\n{e}')
 
-    def generate_vector(self):
+    def generate_vector(self) -> None:
+        """
+        Generate vector map based on the current settings.
+
+        Returns:
+            None
+        """
+        # This method only works when a direction is loaded. If not, do nothing.
         if self.directions is None:
             return
 
@@ -343,12 +444,14 @@ class VisualizationWidget(QWidget):
         UnitX, UnitY = SLIX.toolbox.unit_vectors(self.directions, use_gpu=False)
         color_map = SLIX._cmd.VisualizeParameter.available_colormaps[self.vector_color_map.currentText()]
 
+        # Get parameters from interface
         alpha = self.vector_tab_alpha_parameter.value()
         thinout = int(self.vector_tab_thinout_parameter.value())
         scale = self.vector_tab_scale_parameter.value()
         vector_width = self.vector_tab_vector_width_parameter.value()
         threshold = self.vector_tab_threshold_parameter.value()
 
+        # Show the loaded background image
         if self.vector_background is not None:
             plt.imshow(self.vector_background, cmap='gray')
         if self.vector_checkbox_weight_value.isChecked():
@@ -356,6 +459,10 @@ class VisualizationWidget(QWidget):
         else:
             value_weighting = None
 
+        # Generate either the distrubution of vectors or the vector field
+        # depending on the selected option. This method might fail if the
+        # parameters are not valid or a measurement is missing.
+        # If it fails, show an error message.
         try:
             if self.vector_checkbox_activate_distribution.isChecked():
                 SLIX.visualization.unit_vector_distribution(UnitX, UnitY,
@@ -390,17 +497,33 @@ class VisualizationWidget(QWidget):
         self.image_widget.set_image(convert_numpy_to_qimage(vector_image))
         self.vector_tab_save_button.setEnabled(True)
 
-    def generate_parameter_map(self):
+    def generate_parameter_map(self) -> None:
+        """
+        Generate parameter map based on the current settings.
+        Show the result in the image widget.
+
+        Returns:
+            None
+        """
+        # Get color map from matplotlib
         colormap = matplotlib.cm.get_cmap(self.parameter_map_color_map.currentText())
+        # Normalize the image to the range [0, 1]
         shown_image = self.parameter_map.copy()
         shown_image = shown_image.astype(numpy.float32)
         shown_image = (shown_image - shown_image.min()) / (shown_image.max() - shown_image.min())
+        # Apply colormap on normalized image
         shown_image = colormap(shown_image)
         # Convert NumPy RGBA array to RGB array
         shown_image = shown_image[:, :, :3]
         self.image_widget.set_image(convert_numpy_to_qimage(shown_image))
 
-    def save_fom(self):
+    def save_fom(self) -> None:
+        """
+        Save the current FOM image to a file.
+
+        Returns:
+             None
+        """
         filename, datatype = QFileDialog.getSaveFileName(self, 'Save FOM', '.', '*.tiff;; *.h5')
         if len(filename) > 0:
             datatype = datatype[1:]
@@ -408,7 +531,13 @@ class VisualizationWidget(QWidget):
                 filename += datatype
             SLIX.io.imwrite_rgb(filename, self.fom)
 
-    def save_vector(self):
+    def save_vector(self) -> None:
+        """
+        Save the current vector field image to a file.
+
+        Returns:
+             None
+        """
         filename, datatype = QFileDialog.getSaveFileName(self, 'Save Vector Image', '.', '*.tiff;; *.h5')
         if len(filename) > 0:
             datatype = datatype[1:]
@@ -416,7 +545,13 @@ class VisualizationWidget(QWidget):
                 filename += datatype
             SLIX.io.imwrite_rgb(filename, self.vector_field)
 
-    def save_parameter_map(self):
+    def save_parameter_map(self) -> None:
+        """
+        Save the current parameter map image to a file.
+
+        Returns:
+             None
+        """
         filename, datatype = QFileDialog.getSaveFileName(self, 'Save Parameter Map', '.', '*.tiff;; *.h5')
         if len(filename) > 0:
             datatype = datatype[1:]
@@ -428,5 +563,6 @@ class VisualizationWidget(QWidget):
             shown_image = shown_image.astype(numpy.float32)
             shown_image = (shown_image - shown_image.min()) / (shown_image.max() - shown_image.min())
             shown_image = colormap(shown_image)
+            # Convert NumPy RGBA array to RGB array
             shown_image = (255 * shown_image[:, :, :3]).astype(numpy.uint8)
             SLIX.io.imwrite_rgb(filename, shown_image)
