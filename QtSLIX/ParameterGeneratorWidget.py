@@ -205,6 +205,9 @@ class ParameterGeneratorWorker(QObject):
 
 
 class ParameterGeneratorWidget(QWidget):
+    """
+    Widget for generating parameters.
+    """
     def __init__(self):
         super().__init__()
 
@@ -238,8 +241,13 @@ class ParameterGeneratorWidget(QWidget):
 
         self.setup_ui()
 
-    def setup_ui(self):
-        self.setWindowTitle("Parameter Generator")
+    def setup_ui(self) -> None:
+        """
+        Set up the user interface.
+
+        Returns:
+            None
+        """
         self.layout = QHBoxLayout()
         self.setLayout(self.layout)
 
@@ -249,9 +257,16 @@ class ParameterGeneratorWidget(QWidget):
         self.layout.addWidget(self.image_widget, stretch=7)
         self.layout.addLayout(self.sidebar, stretch=2)
 
-    def setup_ui_sidebar(self):
+    def setup_ui_sidebar(self) -> None:
+        """
+        Set up the sidebar.
+
+        Returns:
+            None
+        """
         self.sidebar = QVBoxLayout()
 
+        # Open part
         self.sidebar.addWidget(QLabel("<b>Open:</b>"))
         self.sidebar_button_open_measurement = QPushButton(" Measurement")
         self.sidebar_button_open_measurement.clicked.connect(self.open_measurement)
@@ -263,6 +278,7 @@ class ParameterGeneratorWidget(QWidget):
 
         self.sidebar.addStretch(5)
 
+        # Filtering part
         self.sidebar.addWidget(QLabel("<b>Filtering:</b>"))
         # Set filtering algorithm
         self.sidebar_checkbox_filtering = QCheckBox("Enable")
@@ -294,6 +310,7 @@ class ParameterGeneratorWidget(QWidget):
         self.sidebar_checkbox_filtering.stateChanged.connect(self.sidebar_filtering_parameter_2.setEnabled)
 
         self.sidebar.addStretch(1)
+        # Parameter map part
         self.sidebar.addWidget(QLabel("<b>Parameter Maps:</b>"))
 
         self.sidebar_checkbox_average = QCheckBox("Average")
@@ -334,6 +351,7 @@ class ParameterGeneratorWidget(QWidget):
 
         self.sidebar.addStretch(1)
 
+        # Additional option part
         self.sidebar.addWidget(QLabel("<b>Other options:</b>"))
 
         self.sidebar.addWidget(QLabel("Correction direction (°):"))
@@ -361,11 +379,24 @@ class ParameterGeneratorWidget(QWidget):
         self.sidebar_button_generate.setEnabled(False)
         self.sidebar.addWidget(self.sidebar_button_generate)
 
-    def setup_ui_image_widget(self):
+    def setup_ui_image_widget(self) -> None:
+        """
+        Set up the image widget.
+
+        Returns:
+            None
+        """
         self.image_widget = ImageWidget()
         self.image_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-    def open_measurement(self):
+    def open_measurement(self) -> None:
+        """
+        Called when pressing a button. Opens a file dialog to select a measurement file.
+        The measurement will then be loaded and the image widget will be updated.
+
+        Returns:
+             None
+        """
         file = QFileDialog.getOpenFileName(self, "Open Measurement", "",
                                            "*.tiff ;; *.tif ;; *.h5 ;; *.nii ;; *.nii.gz")[0]
         if not file:
@@ -377,7 +408,14 @@ class ParameterGeneratorWidget(QWidget):
         if self.image_widget:
             self.image_widget.set_image(convert_numpy_to_qimage(self.image))
 
-    def open_folder(self):
+    def open_folder(self) -> None:
+        """
+        Called when pressing a button. Opens a file dialog to select a measurement folder.
+        The measurement will then be loaded and the image widget will be updated.
+
+        Returns:
+            None
+        """
         folder = QFileDialog.getExistingDirectory(self, "Open Folder", "")
 
         if not folder:
@@ -387,7 +425,17 @@ class ParameterGeneratorWidget(QWidget):
         self.image = SLIX.io.imread(folder)
         self.sidebar_button_generate.setEnabled(True)
 
-    def generate(self):
+        if self.image_widget:
+            self.image_widget.set_image(convert_numpy_to_qimage(self.image))
+
+    def generate(self) -> None:
+        """
+        Called when pressing a button. Generates the parameter maps and saves them to disk.
+
+        Returns:
+            None
+        """
+        # Prevent the button from being pressed multiple times
         self.sidebar_button_generate.setEnabled(False)
         output_folder = QFileDialog.getExistingDirectory(self, "Save files in folder", "")
 
@@ -395,6 +443,7 @@ class ParameterGeneratorWidget(QWidget):
             self.sidebar_button_generate.setEnabled(True)
             return
 
+        # Show a progress bar while the parameter maps are generated
         dialog = QProgressDialog("Generating...", "Cancel", 0, 0, self)
 
         if self.sidebar_checkbox_filtering.isChecked():
@@ -402,6 +451,7 @@ class ParameterGeneratorWidget(QWidget):
         else:
             filtering_algorithm = "None"
 
+        # Move the main workload to another thread to prevent freezing the GUI
         worker_thread = QThread()
         worker = ParameterGeneratorWorker(self.filename, self.image, output_folder,
                                           filtering_algorithm,
@@ -419,10 +469,11 @@ class ParameterGeneratorWidget(QWidget):
                                           self.sidebar_checkbox_peak_distance.isChecked(),
                                           self.sidebar_checkbox_peak_prominence.isChecked(),
                                           self.sidebar_dir_correction_parameter.value())
+        # Update the progress bar whenever a step is finished
         worker.currentStep.connect(dialog.setLabelText)
         worker.finishedWork.connect(worker_thread.quit)
         worker.moveToThread(worker_thread)
-
+        # Show the progress bar
         dialog.show()
 
         worker_thread.started.connect(worker.process)
@@ -430,6 +481,7 @@ class ParameterGeneratorWidget(QWidget):
         dialog.canceled.connect(worker_thread.requestInterruption)
         worker_thread.start()
 
+        # Wait until the thread is finished
         while not worker_thread.isFinished():
             QCoreApplication.processEvents()
             time.sleep(0.1)
@@ -437,8 +489,10 @@ class ParameterGeneratorWidget(QWidget):
         del worker
         del worker_thread
 
+        # Free the memory on the GPU to allow other applications to use it
         if SLIX.toolbox.gpu_available:
             mempool = cupy.get_default_memory_pool()
             mempool.free_all_blocks()
 
+        # Reenable the button after calculations are finished
         self.sidebar_button_generate.setEnabled(True)
