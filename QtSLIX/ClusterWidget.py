@@ -121,4 +121,51 @@ class ClusterWidget(QWidget):
         self.image_widget.set_image(convert_numpy_to_qimage(shown_image))
 
     def save(self):
-        pass
+        folder = QFileDialog.getExistingDirectory(self, 'Save Cluster Images')
+        if len(folder) == 0:
+            return
+
+        loaded_parameter_maps, basename = Cluster.load_parameter_maps(self.folder)
+        # Flat mask might get set before reaching the inclined region.
+        # This ensures that the flat mask will not get generated twice saving
+        # time.
+        flat_mask = None
+        if self.sidebar_checkbox_flat.isChecked():
+            name = basename.replace('basename', 'flat_mask')
+            flat_mask = SLIX.classification.flat_mask(loaded_parameter_maps['high_prominence_peaks'],
+                                                 loaded_parameter_maps['low_prominence_peaks'],
+                                                 loaded_parameter_maps['peakdistance'])
+            filename = f'{folder}/{name}.tiff'
+            SLIX.io.imwrite(filename, flat_mask)
+
+        if self.sidebar_checkbox_crossing.isChecked():
+            name = basename.replace('basename', 'crossing_mask')
+            mask = SLIX.classification.crossing_mask(loaded_parameter_maps['high_prominence_peaks'],
+                                                     loaded_parameter_maps['max'])
+            filename = f'{folder}/{name}.tiff'
+            SLIX.io.imwrite(filename, mask)
+
+        if self.sidebar_checkbox_inclined.isChecked():
+            name = basename.replace('basename', 'inclined_mask')
+
+            if flat_mask is None:
+                flat_mask = SLIX.classification.flat_mask(loaded_parameter_maps['high_prominence_peaks'],
+                                                          loaded_parameter_maps['low_prominence_peaks'],
+                                                          loaded_parameter_maps['peakdistance'])
+
+            mask = SLIX.classification.inclinated_mask(loaded_parameter_maps['high_prominence_peaks'],
+                                                       loaded_parameter_maps['peakdistance'],
+                                                       loaded_parameter_maps['max'],
+                                                       flat_mask)
+            filename = f'{folder}/{name}.tiff'
+            SLIX.io.imwrite(filename, mask)
+
+        if self.sidebar_checkbox_all.isChecked():
+            name = basename.replace('basename', 'full_mask')
+            mask = SLIX.classification.full_mask(loaded_parameter_maps['high_prominence_peaks'],
+                                                 loaded_parameter_maps['low_prominence_peaks'],
+                                                 loaded_parameter_maps['peakdistance'],
+                                                 loaded_parameter_maps['max'])
+            filename = f'{folder}/{name}.tiff'
+            SLIX.io.imwrite(filename, mask)
+
