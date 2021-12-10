@@ -14,12 +14,62 @@ if SLIX.toolbox.gpu_available:
 
 
 class ParameterGeneratorWorker(QObject):
+    """
+    Worker class for the parameter generator.
+    This class gets called from the ParameterGeneratorWidget when the user clicks the "Generate" button.
+    """
+    # Signal to inform the ParameterGeneratorWidget that the worker has finished
     finishedWork = pyqtSignal()
+    # Signal to inform the ParameterGeneratorWidget what step the worker is currently working on
     currentStep = pyqtSignal(str)
 
-    def __init__(self, filename, image, output_folder, filtering, filtering_parm_1, filtering_parm_2,
-                 use_gpu, detailed, min, max, avg, direction, nc_direction, peaks,
-                 peak_width, peak_distance, peak_prominence, dir_correction):
+    def __init__(self, filename: str, image: numpy.array,
+                 output_folder: str, filtering: str,
+                 filtering_parm_1: float, filtering_parm_2: float,
+                 use_gpu: bool, detailed: bool, min: bool, max: bool,
+                 avg: bool, direction: bool, nc_direction: bool,
+                 peaks: bool, peak_width: bool, peak_distance: bool,
+                 peak_prominence: bool, dir_correction: float):
+        """
+        Initialize the worker.
+
+        Args:
+            filename: Filename of the measurement image
+
+            image: NumPy array of the measurement image
+
+            output_folder: Folder to save the generated images
+
+            filtering: Filtering method to use
+
+            filtering_parm_1: Parameter 1 of the filtering method
+
+            filtering_parm_2: Parameter 2 of the filtering method
+
+            use_gpu: Use GPU for calculations
+
+            detailed: Use detailed mode
+
+            min: Generate minima image
+
+            max: Generate maxima image
+
+            avg: Generate average image
+
+            direction: Generate direction image
+
+            nc_direction: Generate non crossing direction image
+
+            peaks: Generate peaks image
+
+            peak_width: Generate peak width image
+
+            peak_distance: Generate peak distance image
+
+            peak_prominence: Generate peak prominence image
+
+            dir_correction: Direction correction in degree
+        """
         super().__init__()
         self.filename = filename
         self.image = image
@@ -40,15 +90,23 @@ class ParameterGeneratorWorker(QObject):
         self.filtering_parameter_2 = filtering_parm_2
         self.dir_correction = dir_correction
 
-    def process(self):
+    def process(self) -> None:
+        """
+        Process the image. This method is called from the ParameterGeneratorWidget.
+
+        Returns:
+             None
+        """
         output_data_type = ".tiff"
 
+        # Get the filename without the extension to determine the output file names
         if os.path.isdir(self.filename):
             filename_without_extension = SLIX._cmd.ParameterGenerator.get_file_pattern(self.filename)
         else:
             filename_without_extension = \
                 os.path.splitext(os.path.basename(self.filename))[0]
         output_path_name = f'{self.output_folder}/{filename_without_extension}'
+        # Create the output folder if it does not exist
         if os.path.isdir(self.filename):
             SLIX.io.imwrite(f'{output_path_name}_Stack{output_data_type}', self.image)
 
@@ -56,10 +114,12 @@ class ParameterGeneratorWorker(QObject):
         detailed = self.detailed
         detailed_str = "_detailed" if detailed else ""
 
+        # If the thread is stopped, return
         if QThread.currentThread().isInterruptionRequested():
             self.finishedWork.emit()
             return
 
+        # Apply filtering
         if self.filtering != "None":
             self.currentStep.emit(f"Filtering: {self.filtering} "
                                   f"{self.filtering_parameter_1} "
@@ -76,6 +136,7 @@ class ParameterGeneratorWorker(QObject):
         if QThread.currentThread().isInterruptionRequested():
             self.finishedWork.emit()
             return
+        # Generate minima image
         if self.min:
             self.currentStep.emit("Generating minima...")
             min_img = numpy.min(self.image, axis=-1)
@@ -85,6 +146,7 @@ class ParameterGeneratorWorker(QObject):
         if QThread.currentThread().isInterruptionRequested():
             self.finishedWork.emit()
             return
+        # Generate maxima image
         if self.max:
             self.currentStep.emit("Generating maxima...")
             max_img = numpy.max(self.image, axis=-1)
@@ -94,6 +156,7 @@ class ParameterGeneratorWorker(QObject):
         if QThread.currentThread().isInterruptionRequested():
             self.finishedWork.emit()
             return
+        # Generate average image
         if self.avg:
             self.currentStep.emit("Generating average...")
             avg_img = numpy.mean(self.image, axis=-1)
@@ -103,18 +166,21 @@ class ParameterGeneratorWorker(QObject):
         if QThread.currentThread().isInterruptionRequested():
             self.finishedWork.emit()
             return
+        # The following steps require the significant peaks of the measurement ...
         self.currentStep.emit("Generating significant peaks...")
         peaks = SLIX.toolbox.significant_peaks(self.image, use_gpu=gpu, return_numpy=True)
 
         if QThread.currentThread().isInterruptionRequested():
             self.finishedWork.emit()
             return
+        # ... as well as the centroids
         self.currentStep.emit("Generating centroids...")
         centroids = SLIX.toolbox.centroid_correction(self.image, peaks, use_gpu=gpu, return_numpy=True)
 
         if QThread.currentThread().isInterruptionRequested():
             self.finishedWork.emit()
             return
+        # Generate all peaks to write low and high prominence peaks
         if self.peaks:
             self.currentStep.emit("Generating all peaks...")
             all_peaks = SLIX.toolbox.peaks(self.image, use_gpu=gpu, return_numpy=True)
@@ -140,6 +206,7 @@ class ParameterGeneratorWorker(QObject):
         if QThread.currentThread().isInterruptionRequested():
             self.finishedWork.emit()
             return
+        # Generate the direction images
         if self.direction:
             self.currentStep.emit("Generating direction...")
             direction = SLIX.toolbox.direction(peaks, centroids, use_gpu=gpu, number_of_directions=3,
@@ -153,6 +220,7 @@ class ParameterGeneratorWorker(QObject):
         if QThread.currentThread().isInterruptionRequested():
             self.finishedWork.emit()
             return
+        # Generate the non-crossing direction images
         if self.nc_direction:
             self.currentStep.emit("Generating non crossing direction...")
             nc_direction = SLIX.toolbox.direction(peaks, centroids, use_gpu=gpu,
@@ -165,6 +233,7 @@ class ParameterGeneratorWorker(QObject):
         if QThread.currentThread().isInterruptionRequested():
             self.finishedWork.emit()
             return
+        # Generate the peak distance
         if self.peak_distance:
             self.currentStep.emit("Generating peak distance...")
             if detailed:
@@ -178,6 +247,7 @@ class ParameterGeneratorWorker(QObject):
         if QThread.currentThread().isInterruptionRequested():
             self.finishedWork.emit()
             return
+        # Generate the peak width
         if self.peak_width:
             self.currentStep.emit("Generating peak width...")
             if detailed:
@@ -191,6 +261,7 @@ class ParameterGeneratorWorker(QObject):
         if QThread.currentThread().isInterruptionRequested():
             self.finishedWork.emit()
             return
+        # Generate the peak prominence
         if self.peak_prominence:
             self.currentStep.emit("Generating peak prominence...")
             if detailed:
@@ -201,6 +272,7 @@ class ParameterGeneratorWorker(QObject):
                             f'{output_data_type}', prominence)
             del prominence
 
+        # Tell connected components that we are done
         self.finishedWork.emit()
 
 
