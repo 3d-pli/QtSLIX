@@ -11,6 +11,9 @@ __all__ = ['MainWindow']
 
 
 class MainWindow(QMainWindow):
+    """
+    MainWindow class.
+    """
     def __init__(self):
         super().__init__()
 
@@ -24,6 +27,10 @@ class MainWindow(QMainWindow):
         self.setWindowTitle('QtSLIX')
         self.setMinimumSize(1280, 720)
 
+        # Prevent that the window becomes too large. This
+        # might happen if Qt loads an image into a QLabel
+        # Check all screens in case that one screen is larger than
+        # the other.
         screens = QApplication.screens()
         max_width = 0
         max_height = 0
@@ -35,7 +42,13 @@ class MainWindow(QMainWindow):
         self.setup_ui()
         self.show()
 
-    def setup_ui(self):
+    def setup_ui(self) -> None:
+        """
+        Set up the user interface.
+
+        Returns:
+             None
+        """
         self.layout = QVBoxLayout()
         self.main_widget.setLayout(self.layout)
 
@@ -47,30 +60,62 @@ class MainWindow(QMainWindow):
 
         self.create_menu_bar()
 
-    def create_menu_bar(self):
+    def create_menu_bar(self) -> None:
+        """
+        Create the menu bar.
+
+        Returns:
+             None
+        """
         self.helpmenu = self.menuBar().addMenu('&Help')
         self.helpmenu.addAction('&About', self.about)
-        self.helpmenu.addAction('&Help', self.help)
         self.helpmenu.addAction('&License', self.license)
         self.helpmenu.addAction('&Credits', self.credits)
         self.helpmenu.addAction('&About Qt', self.about_qt)
 
-    def close(self):
+    def close(self) -> None:
+        """
+        Close the application.
+
+        Returns:
+             None
+        """
         QApplication.quit()
 
-    def about(self):
+    def about(self) -> None:
+        """
+        Show information about the application.
+
+        Returns:
+             None
+        """
         pass
 
-    def help(self):
-        pass
+    def license(self) -> None:
+        """
+        Show information about the license.
 
-    def license(self):
+        Returns:
+             None
+        """
         url = QUrl('https://jugit.fz-juelich.de/inm-1/fa/sli/tools/qtslix/-/blob/main/LICENSE')
         if not QDesktopServices.openUrl(url):
             QMessageBox.warning(self, 'Open Url', 'Could not open url')
 
-    def credits(self):
+    def credits(self) -> None:
+        """
+        Show information about the authors.
+
+        Returns:
+             None
+        """
         QMessageBox.information(self, 'Credits', '')
 
-    def about_qt(self):
+    def about_qt(self) -> None:
+        """
+        Show information about Qt.
+
+        Returns:
+             None
+        """
         QApplication.aboutQt()
