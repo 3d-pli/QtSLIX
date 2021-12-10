@@ -1,14 +1,18 @@
-import matplotlib
-import numpy
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTabWidget, \
-    QMessageBox, QFileDialog, QLabel, QPushButton, QCheckBox, QSizePolicy, QHBoxLayout, QComboBox
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QFileDialog, \
+    QLabel, QPushButton, QCheckBox, QSizePolicy, QHBoxLayout, QComboBox
 
 from .ImageWidget import ImageWidget, convert_numpy_to_qimage
 import SLIX
 from SLIX._cmd import Cluster
 
+import matplotlib
+import numpy
+
 
 class ClusterWidget(QWidget):
+    """
+    Widget for clustering images.
+    """
     def __init__(self):
         super().__init__()
 
@@ -31,7 +35,13 @@ class ClusterWidget(QWidget):
 
         self.setup_ui()
 
-    def setup_ui(self):
+    def setup_ui(self) -> None:
+        """
+        Set up the main layout.
+
+        Returns:
+             None
+        """
         self.setup_ui_image_widget()
         self.setup_ui_sidebar()
 
@@ -40,11 +50,23 @@ class ClusterWidget(QWidget):
         self.layout.addLayout(self.sidebar, stretch=2)
         self.setLayout(self.layout)
 
-    def setup_ui_image_widget(self):
+    def setup_ui_image_widget(self) -> None:
+        """
+        Set up the image widget.
+
+        Returns:
+             None
+        """
         self.image_widget = ImageWidget()
         self.image_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-    def setup_ui_sidebar(self):
+    def setup_ui_sidebar(self) -> None:
+        """
+        Set up the sidebar.
+
+        Returns:
+             None
+        """
         self.sidebar = QVBoxLayout()
 
         self.sidebar.addWidget(QLabel("<b>Open:</b>"))
@@ -92,17 +114,31 @@ class ClusterWidget(QWidget):
         self.sidebar.addWidget(self.sidebar_button_generate)
 
     def open_folder(self):
+        """
+        Let the user select a folder save the selected folder for future actions.
+
+        Returns:
+            None
+        """
         folder = QFileDialog.getExistingDirectory(self, "Open Folder", "")
 
         if not folder:
+            # The user cancelled the dialog
             return
 
         self.folder = folder
         self.sidebar_button_preview.setEnabled(True)
         self.sidebar_button_generate.setEnabled(True)
 
-    def generate_preview(self):
+    def generate_preview(self) -> None:
+        """
+        Generate a preview of the all parameter map.
+
+        Returns:
+            None
+        """
         if self.folder is None:
+            # Do nothing if the user didn't open a folder
             return
 
         loaded_parameter_maps, _ = Cluster.load_parameter_maps(self.folder)
@@ -111,40 +147,56 @@ class ClusterWidget(QWidget):
                                                     loaded_parameter_maps['peakdistance'],
                                                     loaded_parameter_maps['max'])
 
+        # Get the color map from matplotlib based on the selected item in the QWidget
         colormap = matplotlib.cm.get_cmap(self.sidebar_color_map.currentText())
-        shown_image = result_mask.copy()
-        shown_image = shown_image.astype(numpy.float32)
+        # Normalize the image to the range [0, 1] and apply the color map to it
+        shown_image = result_mask.astype(numpy.float32)
         shown_image = (shown_image - shown_image.min()) / (shown_image.max() - shown_image.min())
         shown_image = colormap(shown_image)
         # Convert NumPy RGBA array to RGB array
         shown_image = shown_image[:, :, :3]
         self.image_widget.set_image(convert_numpy_to_qimage(shown_image))
 
-    def save(self):
+    def save(self) -> None:
+        """
+        Saves the chosen parameter maps to a folder.
+
+        Returns:
+            None
+        """
         folder = QFileDialog.getExistingDirectory(self, 'Save Cluster Images')
         if len(folder) == 0:
+            # The user canceled the selection
             return
 
+        # Get the parameter maps and the basename from the images in the chosen folder
         loaded_parameter_maps, basename = Cluster.load_parameter_maps(self.folder)
         # Flat mask might get set before reaching the inclined region.
         # This ensures that the flat mask will not get generated twice saving
         # time.
         flat_mask = None
+        # If the user has selected to generate the flat mask, generate it.
+        # Save the result in the folder the user has chosen. The filename will be
+        # determined by the input file name.
         if self.sidebar_checkbox_flat.isChecked():
             name = basename.replace('basename', 'flat_mask')
             flat_mask = SLIX.classification.flat_mask(loaded_parameter_maps['high_prominence_peaks'],
-                                                 loaded_parameter_maps['low_prominence_peaks'],
-                                                 loaded_parameter_maps['peakdistance'])
+                                                      loaded_parameter_maps['low_prominence_peaks'],
+                                                      loaded_parameter_maps['peakdistance'])
             filename = f'{folder}/{name}.tiff'
             SLIX.io.imwrite(filename, flat_mask)
-
+        # If the user has selected to generate the crossing mask, generate it.
+        # Save the result in the folder the user has chosen. The filename will be
+        # determined by the input file name.
         if self.sidebar_checkbox_crossing.isChecked():
             name = basename.replace('basename', 'crossing_mask')
             mask = SLIX.classification.crossing_mask(loaded_parameter_maps['high_prominence_peaks'],
                                                      loaded_parameter_maps['max'])
             filename = f'{folder}/{name}.tiff'
             SLIX.io.imwrite(filename, mask)
-
+        # If the user has selected to generate the inclined mask, generate it.
+        # Save the result in the folder the user has chosen. The filename will be
+        # determined by the input file name.
         if self.sidebar_checkbox_inclined.isChecked():
             name = basename.replace('basename', 'inclined_mask')
 
@@ -159,7 +211,9 @@ class ClusterWidget(QWidget):
                                                        flat_mask)
             filename = f'{folder}/{name}.tiff'
             SLIX.io.imwrite(filename, mask)
-
+        # If the user has selected to generate the mask containing all parameters, generate it.
+        # Save the result in the folder the user has chosen. The filename will be
+        # determined by the input file name.
         if self.sidebar_checkbox_all.isChecked():
             name = basename.replace('basename', 'full_mask')
             mask = SLIX.classification.full_mask(loaded_parameter_maps['high_prominence_peaks'],
@@ -168,4 +222,3 @@ class ClusterWidget(QWidget):
                                                  loaded_parameter_maps['max'])
             filename = f'{folder}/{name}.tiff'
             SLIX.io.imwrite(filename, mask)
-
