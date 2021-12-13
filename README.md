@@ -1,4 +1,4 @@
-_# QtSLIX -- A graphical user interface for the Scattered Light Imaging ToolboX
+# QtSLIX -- A graphical user interface for the Scattered Light Imaging ToolboX
 
 ## Introduction
 *Scattered Light Imaging (SLI)* is a novel neuroimaging technique that allows to explore the substructure of nerve fibers, especially in regions with crossing nerve fibers, in whole brain sections with micrometer resolution ([Menzel et al. (2020)](https://arxiv.org/abs/2008.01037)). 
@@ -139,6 +139,44 @@ A progress bar will show the progress of the calculation. You are able to use th
 <img src="assets/Interface_Parameter_Generation_Generate.png" width="720">
 
 ### Visualization
+The second available tab in the interface covers the visualization of resulting parameter maps. 
+The general interface can be seen below.
+
+<img src="assets/Interface_Visualization_On_Open.png" width="720">
+
+The right side has three options to visualize or show parameter maps:
+1. **FOM**: Visualize up to four direction maps as a fiber orientation map
+2. **Vector**: Visualize the direction maps as unit vectors on top of an SLI measurement or parameter map
+3. **Parameter Map**: Visualize the parameter maps as a color map
+
+#### FOM
+A fiber orientation map is a map of the direction of the fibers in the image. 
+Each pixel gets assigned a color based on the direction and inclination angle of the fibers in the underlying image.
+This method for visualizing fiber orientation maps is described in [this paper](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3248698/).
+A direct example can be found [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3248698/figure/F5/?report=objectonly).
+There are different ways to visualize the direction maps.
+QtSLIX supports all implemented variants offered by SLIX.
+
+When clicking on **Open Directions**, a dialog will open where you can choose the direction maps to visualize. 
+After choosing the files, you can choose between the following color maps:
+1. **RGB**: The direction is visualized as a red, green and blue color. The red and green channel are used for the in-plane direction. The blue channel is used for the inclination angle.
+2. **HSVBlack**: The direction color is visualized as the hue of the HSV color space. The saturation is set to 1 and the value is determined by the inclination angle.
+3. **HSVWhite**: The direction color is visualized as the hue of the HSV color space. The saturation is determined by the inclination angle and the value is set to 1.
+4. **HSVBlack_r**: Same as HSVBlack. However, the direction angle is flipped (180° - dir).
+5. **HSVWhite_r**: Same as HSVWhite. However, the direction angle is flipped (180° - dir).
+
+Both the saturation and value channel can also be used to weight the generated color map. 
+If you want to use the saturation channel, you can use the checkmark next to *Weight FOM by Saturation* and load a parameter map which will be used for weighting.
+The parameter map will get normalized to a range of 0-1 to ensure that the color map is in the correct range.
+The same procedure holds true for the value channel.
+
+Clicking on the **Generate** button will generate the FOM and show a preview on the left side of the interface.
+This might take a while depending on the image size. The graphical user interface will freeze during the calculation.
+
+After the calculation is finished, the result can also be saved using the **Save** button. 
+The button is grayed out until at least a preview was generated.
+Using the **Save** option will open a save dialog where you can choose where to save the FOM.
+Both the *.tiff* and *.h5* file format are supported.
 
 ### Clustering
 
@@ -158,11 +196,10 @@ This open source software code was developed in part or in whole in the Human Br
 This software is released under MIT License
 ```
 Copyright (c) 2020 Forschungszentrum Jülich / Jan André Reuter.
-Copyright (c) 2020 Forschungszentrum Jülich / Miriam Menzel.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.python input parameters -i -o
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-```_
+```___
