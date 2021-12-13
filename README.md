@@ -155,7 +155,7 @@ Each pixel gets assigned a color based on the direction and inclination angle of
 This method for visualizing fiber orientation maps is described in [this paper](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3248698/).
 A direct example can be found [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3248698/figure/F5/?report=objectonly).
 There are different ways to visualize the direction maps.
-QtSLIX supports all implemented variants offered by SLIX.
+QtSLIX supports all implemented variants offered by SLIX. For the available SLIX options, look [here](https://github.com/3d-pli/slix#visualization-of-parameter-maps).
 
 When clicking on **Open Directions**, a dialog will open where you can choose the direction maps to visualize. 
 After choosing the files, you can choose between the following color maps:
@@ -178,7 +178,69 @@ The button is grayed out until at least a preview was generated.
 Using the **Save** option will open a save dialog where you can choose where to save the FOM.
 Both the *.tiff* and *.h5* file format are supported.
 
+#### Vector
+
+Similar to the fiber orientation map, vectors can be used to visualize the direction maps on top of an SLI measurement or parameter map.
+The vectors will be shown as lines with a defined with and length. The color of the lines is determined by the direction angles and will follow the color spaces of the fiber orientation map.
+The general interface can be seen below.
+
+<img src="assets/Interface_Visualization_Vector.png" width="720">
+
+Here the background image can be loaded by clicking on the **Open Background Image** button. 
+In addition, the vector length can be weighted by using a parameter map which will be normalized to a range of 0-1. 
+
+Parameters like **Alpha** or **Thinout** will be used to control the appearance of the vector and will result in the same results you expect when using the command line options of SLIX.
+
+| Argument       | Function                                                                                                                                                                                                                                                                                                                |
+|----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `Alpha`        | Factor for the vectors which will be used during visualization. A higher value means that the vectors will be more visible. (Value range: 0 -- 1)                                                                                                                                                                       |
+| `Thinout`      | Thin out vectors by an integer value. A thinout of 20 means that both the x-axis and y-axis are thinned by a value of 20. Default = 20                                                                                                                                                                                  |
+| `Scale`        | Increases the scale of the vectors. A higher scale means that the vectors in the resulting image are longer. This can be helpful if many pixels of the input image are empty but you don't want to use the thinout option to see results. If the scale option isn't used, the vectors are scaled by the thinout option. |
+| `Vector width` | Change the default vector width shown in the resulting image. This can be useful if only a small number of vectors will be shown (for example when using a large thinout)                                                                                                                                               |
+| `Threshold`    | When using the thinout option, you might not want to get a vector for a lonely vector in the base image. This parameter defines a threshold for the allowed percentage of background pixels to be present. If more pixels than the threshold are background pixels, no vector will be shown. (Value range: 0 -- 1)      |
+| `Dpi`          | Set the image DPI value for Matplotlib. Smaller values will result in a lower resolution image which will be written faster. Larger values will need more computation time but will result in clearer images. Default = 1000dpi                                                                                         |
+| `Distribution` | Instead of using each n-th vector for the visualization (determined by the median vector), instead show all vectors on top of each other. Note: Low alpha values (around 1/alpha) are recommended. The threshold parameter is disabled when enabling the distribution.                                                  |
+
+Like with the FOM, clicking on **Generate** will generate the vector image and show a preview of the result.
+Please keep in mind that the calculation of the vector image can take a while, especially when using the distribution option.
+The graphical user interface will freeze in the meantime.
+
+Using the **Save** option will open a save dialog where you can choose where to save the FOM.
+Both the *.tiff* and *.h5* file format are supported.
+
+#### Parameter map
+
+The last available tab contains the simple visualization of parameter maps. 
+The user is able to load a parameter map using the ... option. 
+Loading a parameter map automatically shows it on the left side in the image preview.
+Using a drop-down menu, the user can select Matplotlib color space used for the visualization.
+The user is then able to save to colorized parameter map using the **Save preview** option.
+
+Currently, there is no support for a colorized legend next to the parameter map. 
+This feature may be explored in the future.
+
+A preview of the view is shown below.
+
+<img src="assets/Interface_Visualization_Parameter.png" width="720">
+
 ### Clustering
+
+The last available tab contains the clustering of a measurement based on the generated parameter maps.
+Keep in mind that, just like with the normal version of `SLIXCluster`, optional parameter maps like **Min** and **Max** 
+might be required to ensure that all clustering steps can function as expected.
+
+<img src="assets/Interface_Visualization_Cluster.png" width="720">
+
+Clicking on the **Folder** option will open a folder selection dialog. Here, all needed files need to be located.
+Just like in the parameter map, the user can select the Matplotlib color space used for the visualization.
+
+Using the four checkboxes below, the user can select which classification masks shall be generated. Unlike the preview, 
+the results will not be colorized and will instead be saved as an 8-bit image where each number corresponds to a classification.
+For more information which classification numbers correspond to which masks, please refer to the [SLIXCluster documentation](https://github.com/3d-pli/SLIX#cluster-parameters)
+
+Clicking on **Save** will generate and save all checked masks. The user can select the folder where all files will be saved.
+The filenames will be based on the parameter map names.
+
 
 ## Authors
 - Jan André Reuter
@@ -202,4 +264,4 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.python input parameters -i -o
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-```___
+```
