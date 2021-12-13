@@ -16,8 +16,11 @@ def convert_numpy_to_qimage(image: numpy.array) -> [QImage]:
         A list of QImages (one for each element in the 3rd NumPy array dimension).
     """
     # copy and normalize image
+    max_val = numpy.maximum(2e-15, image.max())
+    min_val = numpy.maximum(1e-15, image.min())
+
     image = image.copy().astype(numpy.float32)
-    image = 255 * (image - image.min()) / (image.max() - image.min())
+    image = 255 * (image - min_val) / (max_val - min_val)
     image = image.astype(numpy.uint8)
 
     # If there is only one channel (grayscale), mark it for the next iterations.
@@ -35,13 +38,10 @@ def convert_numpy_to_qimage(image: numpy.array) -> [QImage]:
         return_list.append(qimage.copy())
     # RGBA
     elif num_measurements == 4:
-        qimage = QImage(image.data, image.shape[1], image.shape[0], image.strides[0], QImage.Format_ARGB32)
+        qimage = QImage(image.data, image.shape[1], image.shape[0], image.strides[0], QImage.Format_RGBA8888)
         return_list.append(qimage.copy())
     # Grayscale
     else:
-        # Create a grayscale color table
-        gray_color_table = [qRgb(i, i, i) for i in range(256)]
-
         # Convert image to QImage
         for i in range(num_measurements):
             if num_measurements > 1:
@@ -49,8 +49,7 @@ def convert_numpy_to_qimage(image: numpy.array) -> [QImage]:
             else:
                 image_i = image.copy()
             qimage = QImage(image_i.data, image_i.shape[1], image_i.shape[0],
-                            image_i.strides[0], QImage.Format_Indexed8)
-            qimage.setColorTable(gray_color_table)
+                            image_i.strides[0], QImage.Format_Grayscale8)
             return_list.append(qimage.copy())
 
     return return_list
