@@ -1,7 +1,8 @@
 import pytest
 import numpy
-from PyQt5 import QtGui
+from PyQt5 import QtGui, QtCore
 from PyQt5.QtGui import qRed, qGreen, qBlue, qAlpha
+from PyQt5.QtWidgets import QScrollBar
 
 from QtSLIX import ImageWidget
 
@@ -90,4 +91,25 @@ class TestImageWidget:
                 assert qGreen(widget.image[0].pixel(i, j)) == 0
                 assert qBlue(widget.image[0].pixel(i, j)) == 0
 
+        assert widget.image_label.pixmap() is not None
 
+    def test_use_scrollbar(self, qtbot):
+        image = numpy.zeros((10, 10, 10), dtype=float)
+        image[..., 0] = 0.5
+        image[..., 1] = 1
+        qimage = ImageWidget.convert_numpy_to_qimage(image)
+
+        widget = ImageWidget.ImageWidget()
+        qtbot.addWidget(widget)
+        assert widget.image is not None
+        widget.set_image(qimage)
+        assert widget.image is not None
+
+        assert widget.image_label.pixmap() is not None
+        assert widget.image_scroll_bar is not None
+
+        assert widget.image_scroll_bar.value() == 0
+        qtbot.mouseClick(widget.image_scroll_bar, QtCore.Qt.LeftButton)
+        assert widget.image_scroll_bar.value() == 1
+        qtbot.mouseClick(widget.image_scroll_bar, QtCore.Qt.LeftButton)
+        assert widget.image_scroll_bar.value() == 2
