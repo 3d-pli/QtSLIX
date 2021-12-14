@@ -30,6 +30,7 @@ class VisualizationWidget(QWidget):
         self.parameter_map_tab_button_save = None
 
         self.directions = None
+        self.inclinations = None
 
         self.fom = None
         self.fom_checkbox_weight_saturation = None
@@ -101,6 +102,10 @@ class VisualizationWidget(QWidget):
         fom_tab_button_open_measurement = QPushButton("Open Directions")
         fom_tab_button_open_measurement.clicked.connect(self.open_direction)
         fom_tab.layout.addWidget(fom_tab_button_open_measurement)
+
+        fom_tab_button_open_inclination = QPushButton("Open Inclination")
+        fom_tab_button_open_inclination.clicked.connect(self.open_inclination)
+        fom_tab.layout.addWidget(fom_tab_button_open_inclination)
 
         fom_tab.layout.addStretch(3)
 
@@ -314,8 +319,43 @@ class VisualizationWidget(QWidget):
                                                              [:, :, numpy.newaxis]),
                                                             axis=-1)
             self.directions = direction_image
+            self.inclinations = None
             self.fom_tab_button_generate.setEnabled(True)
             self.vector_tab_button_generate.setEnabled(True)
+        except ValueError as e:
+            QMessageBox.critical(self, 'Error',
+                                 f'Could not load directions. Check your input files. Error message:\n{e}')
+
+    def open_inclination(self) -> None:
+        """
+        Open one or more direction files.
+
+        Returns:
+            None
+        """
+        filename = QFileDialog.getOpenFileNames(self, 'Open Inclinations', '.', '*.tiff;; *.h5;; *.nii')[0]
+        if len(filename) == 0:
+            return
+
+        try:
+            inclination_image = None
+            filename.sort()
+            for file in filename:
+                # Arrange the direction images in a NumPy stack
+                single_inclination_image = SLIX.io.imread(file)
+                if inclination_image is None:
+                    inclination_image = single_inclination_image
+                else:
+                    if len(inclination_image.shape) == 2:
+                        inclination_image = numpy.stack((inclination_image,
+                                                         single_inclination_image),
+                                                        axis=-1)
+                    else:
+                        inclination_image = numpy.concatenate((inclination_image,
+                                                               single_inclination_image
+                                                               [:, :, numpy.newaxis]),
+                                                              axis=-1)
+            self.inclinations = inclination_image
         except ValueError as e:
             QMessageBox.critical(self, 'Error',
                                  f'Could not load directions. Check your input files. Error message:\n{e}')
@@ -415,7 +455,8 @@ class VisualizationWidget(QWidget):
 
         # Try to generate the FOM. If it fails, show an error message.
         try:
-            self.fom = SLIX.visualization.direction(self.directions, saturation=saturation_weighting,
+            self.fom = SLIX.visualization.direction(self.directions, inclination=self.inclinations,
+                                                    saturation=saturation_weighting,
                                                     value=value_weighting, colormap=color_map)
 
             self.image_widget.set_image(convert_numpy_to_qimage(self.fom))
