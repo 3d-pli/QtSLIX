@@ -35,10 +35,12 @@ def convert_numpy_to_qimage(image: numpy.array) -> [QImage]:
     # RGB
     if num_measurements == 3:
         qimage = QImage(image.data, image.shape[1], image.shape[0], image.strides[0], QImage.Format_RGB888)
+        # Create a copy to prevent crashes due to the data pointed at the QImage being deleted
         return_list.append(qimage.copy())
     # RGBA
     elif num_measurements == 4:
         qimage = QImage(image.data, image.shape[1], image.shape[0], image.strides[0], QImage.Format_RGBA8888)
+        # Create a copy to prevent crashes due to the data pointed at the QImage being deleted
         return_list.append(qimage.copy())
     # Grayscale
     else:
@@ -50,6 +52,7 @@ def convert_numpy_to_qimage(image: numpy.array) -> [QImage]:
                 image_i = image.copy()
             qimage = QImage(image_i.data, image_i.shape[1], image_i.shape[0],
                             image_i.strides[0], QImage.Format_Grayscale8)
+            # Create a copy to prevent crashes due to the data pointed at the QImage being deleted
             return_list.append(qimage.copy())
 
     return return_list
