@@ -3,7 +3,28 @@ from PyQt5.QtWidgets import QWidget, QScrollBar, QVBoxLayout, QLabel
 from PyQt5.QtGui import QImage, QPixmap, qRgb, QResizeEvent
 from PyQt5.QtCore import Qt
 
-__all__ = ['convert_numpy_to_qimage', 'ImageWidget']
+__all__ = ['normalize_image', 'convert_numpy_to_qimage', 'ImageWidget']
+
+
+def normalize_image(image: numpy.ndarray) -> numpy.ndarray:
+    """
+    Normalize a NumPy array to the range [0, 255].
+
+    Args:
+        image: A 2D or 3D NumPy array.
+
+    Returns:
+        A normalized 2D or 3D NumPy array.
+    """
+    # copy and normalize image
+    max_val = numpy.maximum(2e-15, image.max())
+    min_val = numpy.maximum(1e-15, image.min())
+
+    image = image.copy().astype(numpy.float32)
+    image = 255 * (image - min_val) / (max_val - min_val)
+    image = image.astype(numpy.uint8)
+
+    return image
 
 
 def __convert_numpy_to_qimage_2d(image: numpy.ndarray) -> QImage:
@@ -23,6 +44,64 @@ def __convert_numpy_to_qimage_2d(image: numpy.ndarray) -> QImage:
                   image_i.strides[0], QImage.Format_Grayscale8).copy()
 
 
+def __convert_numpy_to_qimage_rgb(image: numpy.ndarray) -> QImage:
+    """
+    Convert a (x, y, 3) NumPy array to a QImage.
+    Supports RGB images.
+
+    Args:
+        image: A 3D NumPy array.
+
+    Returns:
+        A RGB QImage.
+    """
+    image = image.copy()
+    qimage = QImage(image.data, image.shape[1], image.shape[0], image.strides[0], QImage.Format_RGB888)
+    # Create a copy to prevent crashes due to the data pointed at the QImage being deleted
+    return qimage.copy()
+
+
+def __convert_numpy_to_qimage_rgba(image: numpy.ndarray) -> QImage:
+    """
+    Convert a (x, y, 4) NumPy array to a QImage.
+    Supports RGBA images.
+
+    Args:
+        image: A 3D NumPy array.
+
+    Returns:
+        A RGBA QImage.
+    """
+    image = image.copy()
+    qimage = QImage(image.data, image.shape[1], image.shape[0], image.strides[0], QImage.Format_RGBA8888)
+    # Create a copy to prevent crashes due to the data pointed at the QImage being deleted
+    return qimage.copy()
+
+
+def __convert_numpy_to_qimage_3d(image: numpy.ndarray, num_measurements: int) -> [QImage]:
+    """
+    Convert a (x, y, num_measurements) NumPy array to a list of QImages.
+    Supports grayscale images.
+
+    Args:
+        image: A 3D NumPy array.
+        num_measurements: The number of measurements in the 3rd NumPy array dimension.
+
+    Returns:
+        A list of 2D grayscale QImages.
+    """
+    # Return variable
+    return_list = []
+    # Convert image to QImage
+    for i in range(num_measurements):
+        image_i = image[..., i].copy()
+        qimage = QImage(image_i.data, image_i.shape[1], image_i.shape[0],
+                        image_i.strides[0], QImage.Format_Grayscale8)
+        # Create a copy to prevent crashes due to the data pointed at the QImage being deleted
+        return_list.append(qimage.copy())
+    return return_list
+
+
 def convert_numpy_to_qimage(image: numpy.array) -> [QImage]:
     """
     Convert a 2D or 3D NumPy array to a QImage.
@@ -34,13 +113,7 @@ def convert_numpy_to_qimage(image: numpy.array) -> [QImage]:
     Returns:
         A list of QImages (one for each element in the 3rd NumPy array dimension).
     """
-    # copy and normalize image
-    max_val = numpy.maximum(2e-15, image.max())
-    min_val = numpy.maximum(1e-15, image.min())
-
-    image = image.copy().astype(numpy.float32)
-    image = 255 * (image - min_val) / (max_val - min_val)
-    image = image.astype(numpy.uint8)
+    image = normalize_image(image)
 
     # If there is only one channel (grayscale), mark it for the next iterations.
     if image.ndim == 2:
@@ -50,25 +123,12 @@ def convert_numpy_to_qimage(image: numpy.array) -> [QImage]:
 
     # RGB
     if num_measurements == 3:
-        qimage = QImage(image.data, image.shape[1], image.shape[0], image.strides[0], QImage.Format_RGB888)
-        # Create a copy to prevent crashes due to the data pointed at the QImage being deleted
-        return [qimage.copy()]
+        return [__convert_numpy_to_qimage_rgb(image)]
     # RGBA
     elif num_measurements == 4:
-        qimage = QImage(image.data, image.shape[1], image.shape[0], image.strides[0], QImage.Format_RGBA8888)
-        # Create a copy to prevent crashes due to the data pointed at the QImage being deleted
-        return [qimage.copy()]
+        return [__convert_numpy_to_qimage_rgba(image)],
 
-    # Return variable
-    return_list = []
-    # Convert image to QImage
-    for i in range(num_measurements):
-        image_i = image[..., i].copy()
-        qimage = QImage(image_i.data, image_i.shape[1], image_i.shape[0],
-                        image_i.strides[0], QImage.Format_Grayscale8)
-        # Create a copy to prevent crashes due to the data pointed at the QImage being deleted
-        return_list.append(qimage.copy())
-    return return_list
+    return __convert_numpy_to_qimage_3d(image, num_measurements)
 
 
 class ImageWidget(QWidget):
