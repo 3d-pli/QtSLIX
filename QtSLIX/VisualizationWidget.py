@@ -1,10 +1,13 @@
+import time
+
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, \
     QFileDialog, QCheckBox, QPushButton, QProgressDialog, QSizePolicy, QTabWidget, QComboBox, QLabel, QMessageBox, \
     QDoubleSpinBox
-from PyQt5.QtCore import QCoreApplication, QObject, QThread, pyqtSignal, QLocale
+from PyQt5.QtCore import QCoreApplication, QThread, QLocale
 
 import SLIX._cmd.VisualizeParameter
 from .ImageWidget import ImageWidget, convert_numpy_to_qimage
+from .ThreadWorkers.Visualization import FOMWorker
 import numpy
 import matplotlib
 from matplotlib import pyplot as plt
@@ -289,6 +292,15 @@ class VisualizationWidget(QWidget):
         parameter_map_tab.setLayout(parameter_map_tab.layout)
         return parameter_map_tab
 
+    def show_error_message(self, message: str) -> None:
+        """
+        Shows an error message.
+
+        Returns:
+            None
+        """
+        QMessageBox.warning(self, "Error", message)
+
     def open_direction(self) -> None:
         """
         Open one or more direction files.
@@ -325,6 +337,12 @@ class VisualizationWidget(QWidget):
         except ValueError as e:
             QMessageBox.critical(self, 'Error',
                                  f'Could not load directions. Check your input files. Error message:\n{e}')
+
+    def __open_direction_single(self):
+        pass
+
+    def __open_direction_multiple(self):
+        pass
 
     def open_inclination(self) -> None:
         """
@@ -453,17 +471,38 @@ class VisualizationWidget(QWidget):
         # Get the color map which will be used in the FOM generation method.
         color_map = SLIX._cmd.VisualizeParameter.available_colormaps[self.fom_color_map.currentText()]
 
-        # Try to generate the FOM. If it fails, show an error message.
-        try:
-            self.fom = SLIX.visualization.direction(self.directions, inclination=self.inclinations,
-                                                    saturation=saturation_weighting,
-                                                    value=value_weighting, colormap=color_map)
+        # Show a progress bar while the parameter maps are generated
+        dialog = QProgressDialog("Generating...", "Cancel", 0, 0, self)
+        # Move the main workload to another thread to prevent freezing the GUI
+        worker_thread = QThread()
+        worker = FOMWorker(saturation_weighting, value_weighting, color_map, self.directions, self.inclinations)
+        # Update the progress bar whenever a step is finished
+        worker.currentStep.connect(dialog.setLabelText)
+        worker.finishedWork.connect(worker_thread.quit)
+        worker.finishedWork.connect(self.set_fom)
+        worker.errorMessage.connect(self.show_error_message)
+        worker.moveToThread(worker_thread)
+        # Show the progress bar
+        dialog.show()
 
+        worker_thread.started.connect(worker.process)
+        worker_thread.finished.connect(dialog.close)
+        dialog.canceled.connect(worker_thread.requestInterruption)
+        worker_thread.start()
+
+        # Wait until the thread is finished
+        while not worker_thread.isFinished():
+            QCoreApplication.processEvents()
+            time.sleep(0.1)
+
+        del worker
+        del worker_thread
+
+    def set_fom(self, fom: numpy.ndarray) -> None:
+        self.fom = fom
+        if self.fom is not None:
             self.image_widget.set_image(convert_numpy_to_qimage(self.fom))
             self.fom_tab_save_button.setEnabled(True)
-        except ValueError as e:
-            QMessageBox.critical(self, 'Error', f'Could not generate FOM. Check your input files.\n'
-                                                f'Error message:\n{e}')
 
     def generate_vector(self) -> None:
         """
