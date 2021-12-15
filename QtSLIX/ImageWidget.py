@@ -3,6 +3,25 @@ from PyQt5.QtWidgets import QWidget, QScrollBar, QVBoxLayout, QLabel
 from PyQt5.QtGui import QImage, QPixmap, qRgb, QResizeEvent
 from PyQt5.QtCore import Qt
 
+__all__ = ['convert_numpy_to_qimage', 'ImageWidget']
+
+
+def __convert_numpy_to_qimage_2d(image: numpy.ndarray) -> QImage:
+    """
+    Convert a 2D NumPy array to a QImage.
+    Supportsgrayscale images.
+
+    Args:
+        image: A 2D or 3D NumPy array.
+
+    Returns:
+        A QImage.
+    """
+
+    image_i = image.copy()
+    return QImage(image_i.data, image_i.shape[1], image_i.shape[0],
+                  image_i.strides[0], QImage.Format_Grayscale8).copy()
+
 
 def convert_numpy_to_qimage(image: numpy.array) -> [QImage]:
     """
@@ -24,37 +43,31 @@ def convert_numpy_to_qimage(image: numpy.array) -> [QImage]:
     image = image.astype(numpy.uint8)
 
     # If there is only one channel (grayscale), mark it for the next iterations.
-    if len(image.shape) > 2:
-        num_measurements = image.shape[2]
-    else:
-        num_measurements = 1
+    if image.ndim == 2:
+        return [__convert_numpy_to_qimage_2d(image)]
 
-    # Return variable
-    return_list = []
+    num_measurements = image.shape[2]
 
     # RGB
     if num_measurements == 3:
         qimage = QImage(image.data, image.shape[1], image.shape[0], image.strides[0], QImage.Format_RGB888)
         # Create a copy to prevent crashes due to the data pointed at the QImage being deleted
-        return_list.append(qimage.copy())
+        return [qimage.copy()]
     # RGBA
     elif num_measurements == 4:
         qimage = QImage(image.data, image.shape[1], image.shape[0], image.strides[0], QImage.Format_RGBA8888)
         # Create a copy to prevent crashes due to the data pointed at the QImage being deleted
-        return_list.append(qimage.copy())
-    # Grayscale
-    else:
-        # Convert image to QImage
-        for i in range(num_measurements):
-            if num_measurements > 1:
-                image_i = image[..., i].copy()
-            else:
-                image_i = image.copy()
-            qimage = QImage(image_i.data, image_i.shape[1], image_i.shape[0],
-                            image_i.strides[0], QImage.Format_Grayscale8)
-            # Create a copy to prevent crashes due to the data pointed at the QImage being deleted
-            return_list.append(qimage.copy())
+        return [qimage.copy()]
 
+    # Return variable
+    return_list = []
+    # Convert image to QImage
+    for i in range(num_measurements):
+        image_i = image[..., i].copy()
+        qimage = QImage(image_i.data, image_i.shape[1], image_i.shape[0],
+                        image_i.strides[0], QImage.Format_Grayscale8)
+        # Create a copy to prevent crashes due to the data pointed at the QImage being deleted
+        return_list.append(qimage.copy())
     return return_list
 
 
