@@ -126,7 +126,7 @@ def convert_numpy_to_qimage(image: numpy.array) -> [QImage]:
         return [__convert_numpy_to_qimage_rgb(image)]
     # RGBA
     elif num_measurements == 4:
-        return [__convert_numpy_to_qimage_rgba(image)],
+        return [__convert_numpy_to_qimage_rgba(image)]
 
     return __convert_numpy_to_qimage_3d(image, num_measurements)
 
