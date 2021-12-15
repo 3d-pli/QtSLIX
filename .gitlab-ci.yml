@@ -18,9 +18,10 @@ test:python3:
     image: cupy/cupy:v8.0.0
     script:
         - apt-get update -qq && apt-get upgrade -y
-        - apt-get install -y python3 python3-pip libglib2.0-0 ffmpeg libsm6 libxext6
+        - apt-get install -y python3 python3-pip libglib2.0-0 ffmpeg libsm6 libxext6 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0
         - /usr/bin/python3 -m pip install --upgrade pip
         - pip3 install -r requirements.txt
+        - pip3 install pytest-xvfb
         # Online preview of tests that did run successfully
         - pytest tests --junitxml=report.xml
     artifacts:
@@ -36,7 +37,7 @@ install:python3:
     image: cupy/cupy:v8.0.0
     script:
         - apt-get update -qq && apt-get upgrade -y
-        - apt-get install -y python3 python3-pip libglib2.0-0 ffmpeg libsm6 libxext6
+        - apt-get install -y python3 python3-pip libglib2.0-0 ffmpeg libsm6 libxext6 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0
         - /usr/bin/python3 -m pip install --upgrade pip
         - pip3 install .
     tags:
@@ -48,7 +49,7 @@ pack:python3:
     image: cupy/cupy:v8.0.0
     script:
         - apt-get update -qq && apt-get upgrade -y
-        - apt-get install -y python3 python3-pip libglib2.0-0 ffmpeg libsm6 libxext6
+        - apt-get install -y python3 python3-pip libglib2.0-0 ffmpeg libsm6 libxext6 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0
         - /usr/bin/python3 -m pip install --upgrade pip
         - pip3 install pep517
         - python3 -m pep517.build --source --binary --out-dir dist/ .
