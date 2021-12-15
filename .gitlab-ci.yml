@@ -17,7 +17,7 @@ test:python3:
     stage: test
     image: cupy/cupy:latest
     script:
-        - export QT_QPA_PLATFORM="offscreen"
+        - export QT_QPA_PLATFORM="offscreen" && export DEBIAN_FRONTEND=noninteractive
         - apt-get update -qq && apt-get upgrade -y
         - apt-get install -y python3 python3-pip libglib2.0-0 ffmpeg libsm6 libxext6 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0
         - /usr/bin/python3 -m pip install --upgrade pip
