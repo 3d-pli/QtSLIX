@@ -1,7 +1,7 @@
 numpy
 SLIX>=2.4.0
 matplotlib
-PtQt5
+PyQt5
 pytest
 pytest-cov
 pytest-qt
