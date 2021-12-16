@@ -3,11 +3,11 @@ import time
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, \
     QFileDialog, QCheckBox, QPushButton, QProgressDialog, QSizePolicy, QTabWidget, QComboBox, QLabel, QMessageBox, \
     QDoubleSpinBox
-from PyQt5.QtCore import QCoreApplication, QThread, QLocale
+from PyQt5.QtCore import QCoreApplication, QThread, QLocale, Qt
 
 import SLIX._cmd.VisualizeParameter
 from .ImageWidget import ImageWidget, convert_numpy_to_qimage
-from .ThreadWorkers.Visualization import FOMWorker
+from .ThreadWorkers.Visualization import FOMWorker, VectorWorker
 import numpy
 import matplotlib
 from matplotlib import pyplot as plt
@@ -515,25 +515,14 @@ class VisualizationWidget(QWidget):
         if self.directions is None:
             return
 
-        # Completely clear matplotlib figure to ensure that the plot is not left in a weird state
-        plt.clf()
-        plt.cla()
-        plt.axis('off')
-
-        # Generate unit vectors from direction images
-        UnitX, UnitY = SLIX.toolbox.unit_vectors(self.directions, use_gpu=False)
-        color_map = SLIX._cmd.VisualizeParameter.available_colormaps[self.vector_color_map.currentText()]
-
         # Get parameters from interface
+        color_map = self.vector_color_map.currentText()
         alpha = self.vector_tab_alpha_parameter.value()
         thinout = int(self.vector_tab_thinout_parameter.value())
         scale = self.vector_tab_scale_parameter.value()
         vector_width = self.vector_tab_vector_width_parameter.value()
         threshold = self.vector_tab_threshold_parameter.value()
 
-        # Show the loaded background image
-        if self.vector_background is not None:
-            plt.imshow(self.vector_background, cmap='gray')
         if self.vector_checkbox_weight_value.isChecked():
             value_weighting = self.vector_weighting
         else:
@@ -543,39 +532,45 @@ class VisualizationWidget(QWidget):
         # depending on the selected option. This method might fail if the
         # parameters are not valid or a measurement is missing.
         # If it fails, show an error message.
-        try:
-            if self.vector_checkbox_activate_distribution.isChecked():
-                SLIX.visualization.unit_vector_distribution(UnitX, UnitY,
-                                                            thinout=thinout,
-                                                            alpha=alpha,
-                                                            scale=scale,
-                                                            vector_width=vector_width,
-                                                            colormap=color_map,
-                                                            weighting=value_weighting)
-            else:
-                SLIX.visualization.unit_vectors(UnitX, UnitY,
-                                                thinout=thinout,
-                                                alpha=alpha,
-                                                scale=scale,
-                                                vector_width=vector_width,
-                                                background_threshold=threshold,
-                                                colormap=color_map,
-                                                weighting=value_weighting)
-        except ValueError as e:
-            QMessageBox.critical(self, 'Error', f'Could not generate vector. Check your input files.\n'
-                                                f'Error message:\n{e}')
-            return
+        fig, ax = plt.subplots(dpi=self.vector_tab_dpi_parameter.value())
 
-        # Set dpi
-        plt.gcf().set_dpi(self.vector_tab_dpi_parameter.value())
-        plt.gcf().subplots_adjust(0, 0, 1, 1)
-        # Convert current plot to NumPy array
-        plt.gcf().canvas.draw()
-        vector_image = numpy.array(plt.gcf().canvas.buffer_rgba(), dtype=float)
-        vector_image = vector_image[:, :, :3]
-        self.vector_field = vector_image
-        self.image_widget.set_image(convert_numpy_to_qimage(vector_image))
-        self.vector_tab_save_button.setEnabled(True)
+        # Show a progress bar while the parameter maps are generated
+        dialog = QProgressDialog("Generating...", "Cancel", 0, 0, self)
+        dialog.setCancelButton(None)
+        dialog.setWindowFlag(Qt.CustomizeWindowHint, True)
+        dialog.setWindowFlag(Qt.WindowCloseButtonHint, False)
+
+        # Move the main workload to another thread to prevent freezing the GUI
+        worker_thread = QThread()
+        worker = VectorWorker(fig, ax, self.directions, alpha, thinout, scale, vector_width,
+                              self.vector_checkbox_activate_distribution.isChecked(), threshold,
+                              color_map, self.vector_background, value_weighting)
+        # Update the progress bar whenever a step is finished
+        worker.currentStep.connect(dialog.setLabelText)
+        worker.finishedWork.connect(worker_thread.quit)
+        worker.finishedWork.connect(self.set_vector)
+        worker.errorMessage.connect(self.show_error_message)
+        worker.moveToThread(worker_thread)
+        # Show the progress bar
+        dialog.show()
+
+        worker_thread.started.connect(worker.process)
+        worker_thread.finished.connect(dialog.close)
+        worker_thread.start()
+
+        # Wait until the thread is finished
+        while not worker_thread.isFinished():
+            QCoreApplication.processEvents()
+            time.sleep(0.1)
+
+        del worker
+        del worker_thread
+
+    def set_vector(self, image: numpy.ndarray) -> None:
+        if image is not None:
+            self.vector_field = image
+            self.image_widget.set_image(convert_numpy_to_qimage(self.vector_field))
+            self.vector_tab_save_button.setEnabled(True)
 
     def generate_parameter_map(self) -> None:
         """
