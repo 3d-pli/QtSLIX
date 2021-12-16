@@ -1,6 +1,8 @@
-from PyQt5.QtCore import QObject, pyqtSignal
 import numpy
+from PyQt5.QtCore import QObject, pyqtSignal
 import SLIX
+
+__all__ = ['FOMWorker', 'VectorWorker']
 
 
 class FOMWorker(QObject):

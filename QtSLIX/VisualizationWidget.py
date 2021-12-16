@@ -1,7 +1,8 @@
 import time
 
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, \
-    QFileDialog, QCheckBox, QPushButton, QProgressDialog, QSizePolicy, QTabWidget, QComboBox, QLabel, QMessageBox, \
+    QFileDialog, QCheckBox, QPushButton, QProgressDialog, \
+    QSizePolicy, QTabWidget, QComboBox, QLabel, QMessageBox, \
     QDoubleSpinBox
 from PyQt5.QtCore import QCoreApplication, QThread, QLocale, Qt
 
@@ -12,6 +13,7 @@ import numpy
 import matplotlib
 from matplotlib import pyplot as plt
 
+__all__ = ['VisualizationWidget']
 
 class VisualizationWidget(QWidget):
     """

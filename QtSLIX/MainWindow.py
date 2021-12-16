@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTabWidget, \
-                            QMessageBox, QFileDialog
+                            QMessageBox
 from PyQt5.QtCore import QUrl
 from PyQt5.QtGui import QDesktopServices
 

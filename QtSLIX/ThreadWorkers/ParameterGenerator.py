@@ -6,6 +6,8 @@ import SLIX
 if SLIX.toolbox.gpu_available:
     import cupy
 
+__all__ = ['ParameterGeneratorWorker']
+
 
 class ParameterGeneratorWorker(QObject):
     """

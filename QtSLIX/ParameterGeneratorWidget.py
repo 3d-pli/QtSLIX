@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, \
-    QFileDialog, QCheckBox, QPushButton, QProgressDialog, QSizePolicy, QComboBox, QDoubleSpinBox, QLabel, QMessageBox
+    QFileDialog, QCheckBox, QPushButton, QProgressDialog, \
+    QSizePolicy, QComboBox, QDoubleSpinBox, QLabel, QMessageBox
 from PyQt5.QtCore import QCoreApplication, QThread, QLocale
 
 from .ImageWidget import ImageWidget, convert_numpy_to_qimage
@@ -10,6 +11,7 @@ import time
 if SLIX.toolbox.gpu_available:
     import cupy
 
+__all__ = ['ParameterGeneratorWidget']
 
 class ParameterGeneratorWidget(QWidget):
     """

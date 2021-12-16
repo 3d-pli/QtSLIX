@@ -8,6 +8,7 @@ from SLIX._cmd import Cluster
 import matplotlib
 import numpy
 
+__all__ = ['ClusterWidget']
 
 class ClusterWidget(QWidget):
     """

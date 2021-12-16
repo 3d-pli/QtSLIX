@@ -1,6 +1,6 @@
 import numpy
 from PyQt5.QtWidgets import QWidget, QScrollBar, QVBoxLayout, QLabel
-from PyQt5.QtGui import QImage, QPixmap, qRgb, QResizeEvent
+from PyQt5.QtGui import QImage, QPixmap, QResizeEvent
 from PyQt5.QtCore import Qt
 
 __all__ = ['normalize_image', 'convert_numpy_to_qimage', 'ImageWidget']
