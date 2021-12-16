@@ -338,12 +338,6 @@ class VisualizationWidget(QWidget):
             QMessageBox.critical(self, 'Error',
                                  f'Could not load directions. Check your input files. Error message:\n{e}')
 
-    def __open_direction_single(self):
-        pass
-
-    def __open_direction_multiple(self):
-        pass
-
     def open_inclination(self) -> None:
         """
         Open one or more direction files.
@@ -456,6 +450,8 @@ class VisualizationWidget(QWidget):
         Returns:
              None
         """
+        self.fom_tab_button_generate.setEnabled(False)
+
         # If the FOM should be weighted by the saturation weighting,
         # set the parameter saturation_weighting to the loaded image
         if self.fom_checkbox_weight_saturation.isChecked():
@@ -473,6 +469,9 @@ class VisualizationWidget(QWidget):
 
         # Show a progress bar while the parameter maps are generated
         dialog = QProgressDialog("Generating...", "Cancel", 0, 0, self)
+        dialog.setCancelButton(None)
+        dialog.setWindowFlag(Qt.CustomizeWindowHint, True)
+        dialog.setWindowFlag(Qt.WindowCloseButtonHint, False)
         # Move the main workload to another thread to prevent freezing the GUI
         worker_thread = QThread()
         worker = FOMWorker(saturation_weighting, value_weighting, color_map, self.directions, self.inclinations)
@@ -498,7 +497,18 @@ class VisualizationWidget(QWidget):
         del worker
         del worker_thread
 
+        self.fom_tab_button_generate.setEnabled(True)
+
     def set_fom(self, fom: numpy.ndarray) -> None:
+        """
+        Set the generated FOM to the self.fom attribute and show it in the image viewer.
+
+        Args:
+            fom: The generated FOM.
+
+        Returns:
+            None
+        """
         self.fom = fom
         if self.fom is not None:
             self.image_widget.set_image(convert_numpy_to_qimage(self.fom))
@@ -514,6 +524,8 @@ class VisualizationWidget(QWidget):
         # This method only works when a direction is loaded. If not, do nothing.
         if self.directions is None:
             return
+
+        self.vector_tab_button_generate.setEnabled(False)
 
         # Get parameters from interface
         color_map = self.vector_color_map.currentText()
@@ -566,7 +578,18 @@ class VisualizationWidget(QWidget):
         del worker
         del worker_thread
 
+        self.vector_tab_button_generate.setEnabled(True)
+
     def set_vector(self, image: numpy.ndarray) -> None:
+        """
+        Set the vector map to the image widget.
+
+        Args:
+            image: The vector map.
+
+        Returns:
+            None
+        """
         if image is not None:
             self.vector_field = image
             self.image_widget.set_image(convert_numpy_to_qimage(self.vector_field))
