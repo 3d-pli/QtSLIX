@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTabWidget, \
                             QMessageBox
 from PyQt5.QtCore import QUrl
-from PyQt5.QtGui import QDesktopServices
+from PyQt5.QtGui import QDesktopServices, QCloseEvent
 
 from .ClusterWidget import ClusterWidget
 from .ParameterGeneratorWidget import ParameterGeneratorWidget
@@ -24,6 +24,10 @@ class MainWindow(QMainWindow):
         self.helpmenu = None
         self.tab_bar = None
 
+        self.parameter_generator_widget = None
+        self.visualization_widget = None
+        self.cluster_widget = None
+
         self.setWindowTitle('QtSLIX')
         self.setMinimumSize(1280, 720)
 
@@ -42,6 +46,37 @@ class MainWindow(QMainWindow):
         self.setup_ui()
         self.show()
 
+    def __del__(self):
+        if self.layout:
+            del self.layout
+
+    def closeEvent(self, a0: QCloseEvent) -> None:
+        """
+        Override the close event.
+
+        Args:
+            a0: The close event.
+
+        Returns:
+             None
+        """
+        reply = QMessageBox.question(self, 'Message',
+                                     "Are you sure to quit?",
+                                     QMessageBox.Yes | QMessageBox.No,
+                                     QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            a0.accept()
+            if self.tab_bar:
+                del self.tab_bar
+            if self.parameter_generator_widget:
+                del self.parameter_generator_widget
+            if self.cluster_widget:
+                del self.cluster_widget
+            if self.visualization_widget:
+                del self.visualization_widget
+        else:
+            a0.ignore()
+
     def setup_ui(self) -> None:
         """
         Set up the user interface.
@@ -53,9 +88,12 @@ class MainWindow(QMainWindow):
         self.main_widget.setLayout(self.layout)
 
         self.tab_bar = QTabWidget()
-        self.tab_bar.addTab(ParameterGeneratorWidget(), 'Parameter Generator')
-        self.tab_bar.addTab(VisualizationWidget(), 'Visualization')
-        self.tab_bar.addTab(ClusterWidget(), 'Clustering')
+        self.parameter_generator_widget = ParameterGeneratorWidget()
+        self.tab_bar.addTab(self.parameter_generator_widget, 'Parameter Generator')
+        self.visualization_widget = VisualizationWidget()
+        self.tab_bar.addTab(self.visualization_widget, 'Visualization')
+        self.cluster_widget = ClusterWidget()
+        self.tab_bar.addTab(self.cluster_widget, 'Clustering')
         self.layout.addWidget(self.tab_bar)
 
         self.create_menu_bar()

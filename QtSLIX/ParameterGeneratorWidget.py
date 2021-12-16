@@ -1,22 +1,22 @@
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, \
     QFileDialog, QCheckBox, QPushButton, QProgressDialog, \
     QSizePolicy, QComboBox, QDoubleSpinBox, QLabel, QMessageBox
-from PyQt5.QtCore import QCoreApplication, QThread, QLocale
+from PyQt5.QtCore import QThread, QLocale
 
 from .ImageWidget import ImageWidget, convert_numpy_to_qimage
 from .ThreadWorkers.ParameterGenerator import ParameterGeneratorWorker
 
 import SLIX
-import time
-if SLIX.toolbox.gpu_available:
-    import cupy
+
 
 __all__ = ['ParameterGeneratorWidget']
+
 
 class ParameterGeneratorWidget(QWidget):
     """
     Widget for generating parameters.
     """
+
     def __init__(self):
         super().__init__()
 
@@ -47,8 +47,16 @@ class ParameterGeneratorWidget(QWidget):
 
         self.filename = None
         self.image = None
+        self.worker_thread = None
+        self.worker = None
+        self.progress_dialog = None
 
         self.setup_ui()
+
+    def __del__(self):
+        if self.worker_thread is not None:
+            self.worker_thread.terminate()
+            self.worker_thread.deleteLater()
 
     def setup_ui(self) -> None:
         """
@@ -258,15 +266,15 @@ class ParameterGeneratorWidget(QWidget):
             None
         """
         # Prevent the button from being pressed multiple times
-        self.sidebar_button_generate.setEnabled(False)
         output_folder = QFileDialog.getExistingDirectory(self, "Save files in folder", "")
 
         if not output_folder:
-            self.sidebar_button_generate.setEnabled(True)
             return
 
         # Show a progress bar while the parameter maps are generated
-        dialog = QProgressDialog("Generating...", "Cancel", 0, 0, self)
+        if self.progress_dialog:
+            del self.progress_dialog
+        self.progress_dialog = QProgressDialog("Generating...", "Cancel", 0, 0, self)
 
         if self.sidebar_checkbox_filtering.isChecked():
             filtering_algorithm = self.sidebar_filtering_algorithm.currentText()
@@ -274,48 +282,32 @@ class ParameterGeneratorWidget(QWidget):
             filtering_algorithm = "None"
 
         # Move the main workload to another thread to prevent freezing the GUI
-        worker_thread = QThread()
-        worker = ParameterGeneratorWorker(self.filename, self.image, output_folder,
-                                          filtering_algorithm,
-                                          self.sidebar_filtering_parameter_1.value(),
-                                          self.sidebar_filtering_parameter_2.value(),
-                                          self.sidebar_checkbox_use_gpu.isChecked(),
-                                          self.sidebar_checkbox_detailed.isChecked(),
-                                          self.sidebar_checkbox_minimum.isChecked(),
-                                          self.sidebar_checkbox_maximum.isChecked(),
-                                          self.sidebar_checkbox_average.isChecked(),
-                                          self.sidebar_checkbox_crossing_direction.isChecked(),
-                                          self.sidebar_checkbox_non_crossing_direction.isChecked(),
-                                          self.sidebar_checkbox_peaks.isChecked(),
-                                          self.sidebar_checkbox_peak_width.isChecked(),
-                                          self.sidebar_checkbox_peak_distance.isChecked(),
-                                          self.sidebar_checkbox_peak_prominence.isChecked(),
-                                          self.sidebar_dir_correction_parameter.value())
+        self.worker_thread = QThread()
+        self.worker = ParameterGeneratorWorker(self.filename, self.image, output_folder,
+                                               filtering_algorithm,
+                                               self.sidebar_filtering_parameter_1.value(),
+                                               self.sidebar_filtering_parameter_2.value(),
+                                               self.sidebar_checkbox_use_gpu.isChecked(),
+                                               self.sidebar_checkbox_detailed.isChecked(),
+                                               self.sidebar_checkbox_minimum.isChecked(),
+                                               self.sidebar_checkbox_maximum.isChecked(),
+                                               self.sidebar_checkbox_average.isChecked(),
+                                               self.sidebar_checkbox_crossing_direction.isChecked(),
+                                               self.sidebar_checkbox_non_crossing_direction.isChecked(),
+                                               self.sidebar_checkbox_peaks.isChecked(),
+                                               self.sidebar_checkbox_peak_width.isChecked(),
+                                               self.sidebar_checkbox_peak_distance.isChecked(),
+                                               self.sidebar_checkbox_peak_prominence.isChecked(),
+                                               self.sidebar_dir_correction_parameter.value())
         # Update the progress bar whenever a step is finished
-        worker.currentStep.connect(dialog.setLabelText)
-        worker.finishedWork.connect(worker_thread.quit)
-        worker.errorMessage.connect(self.show_error_message)
-        worker.moveToThread(worker_thread)
+        self.worker.currentStep.connect(self.progress_dialog.setLabelText)
+        self.worker.finishedWork.connect(self.worker_thread.quit)
+        self.worker.errorMessage.connect(self.show_error_message)
+        self.worker.moveToThread(self.worker_thread)
         # Show the progress bar
-        dialog.show()
+        self.progress_dialog.show()
 
-        worker_thread.started.connect(worker.process)
-        worker_thread.finished.connect(dialog.close)
-        dialog.canceled.connect(worker_thread.requestInterruption)
-        worker_thread.start()
-
-        # Wait until the thread is finished
-        while not worker_thread.isFinished():
-            QCoreApplication.processEvents()
-            time.sleep(0.1)
-
-        del worker
-        del worker_thread
-
-        # Free the memory on the GPU to allow other applications to use it
-        if SLIX.toolbox.gpu_available:
-            mempool = cupy.get_default_memory_pool()
-            mempool.free_all_blocks()
-
-        # Reenable the button after calculations are finished
-        self.sidebar_button_generate.setEnabled(True)
+        self.worker_thread.started.connect(self.worker.process)
+        self.worker_thread.finished.connect(self.progress_dialog.close)
+        self.progress_dialog.canceled.connect(self.worker_thread.requestInterruption)
+        self.worker_thread.start()

@@ -304,10 +304,8 @@ class ParameterGeneratorWorker(QObject):
         except cupy.cuda.memory.OutOfMemoryError as e:
             self.errorMessage.emit("cupy.cuda.memory.OutOfMemoryError: Ran out of memory during computation. "
                                    "Please disable the GPU option.")
-            if self.gpu:
-                mempool = cupy.get_default_memory_pool()
-                mempool.free_all_blocks()
-            self.finishedWork.emit()
-            return
+        if self.gpu:
+            mempool = cupy.get_default_memory_pool()
+            mempool.free_all_blocks()
         # Tell connected components that we are done
         self.finishedWork.emit()

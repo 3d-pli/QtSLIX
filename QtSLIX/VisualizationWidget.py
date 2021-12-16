@@ -15,6 +15,7 @@ from matplotlib import pyplot as plt
 
 __all__ = ['VisualizationWidget']
 
+
 class VisualizationWidget(QWidget):
     """
     This class is the main widget for the visualization of the SLIX data.
@@ -61,7 +62,16 @@ class VisualizationWidget(QWidget):
         self.vector_weighting = None
         self.vector_color_map = None
 
+        self.worker = None
+        self.worker_thread = None
+        self.progress_dialog = None
+
         self.setup_ui()
+
+    def __del__(self):
+        if self.worker_thread is not None:
+            self.worker_thread.terminate()
+            self.worker_thread.deleteLater()
 
     def setup_ui_image_widget(self) -> None:
         """
@@ -470,36 +480,34 @@ class VisualizationWidget(QWidget):
         color_map = SLIX._cmd.VisualizeParameter.available_colormaps[self.fom_color_map.currentText()]
 
         # Show a progress bar while the parameter maps are generated
-        dialog = QProgressDialog("Generating...", "Cancel", 0, 0, self)
-        dialog.setCancelButton(None)
-        dialog.setWindowFlag(Qt.CustomizeWindowHint, True)
-        dialog.setWindowFlag(Qt.WindowCloseButtonHint, False)
+        if self.progress_dialog:
+            del self.progress_dialog
+        self.progress_dialog = QProgressDialog("Generating...", "Cancel", 0, 0, self)
+        self.progress_dialog.setCancelButton(None)
+        self.progress_dialog.setWindowFlag(Qt.CustomizeWindowHint, True)
+        self.progress_dialog.setWindowFlag(Qt.WindowCloseButtonHint, False)
         # Move the main workload to another thread to prevent freezing the GUI
-        worker_thread = QThread()
-        worker = FOMWorker(saturation_weighting, value_weighting, color_map, self.directions, self.inclinations)
+        if self.worker_thread:
+            del self.worker_thread
+            self.worker_thread = None
+        self.worker_thread = QThread()
+        self.worker_thread.setTerminationEnabled(True)
+        if self.worker:
+            del self.worker
+        self.worker = FOMWorker(saturation_weighting, value_weighting, color_map, self.directions, self.inclinations)
         # Update the progress bar whenever a step is finished
-        worker.currentStep.connect(dialog.setLabelText)
-        worker.finishedWork.connect(worker_thread.quit)
-        worker.finishedWork.connect(self.set_fom)
-        worker.errorMessage.connect(self.show_error_message)
-        worker.moveToThread(worker_thread)
+        self.worker.currentStep.connect(self.progress_dialog.setLabelText)
+        self.worker.finishedWork.connect(self.worker_thread.quit)
+        self.worker.finishedWork.connect(self.set_fom)
+        self.worker.errorMessage.connect(self.show_error_message)
+        self.worker.moveToThread(self.worker_thread)
         # Show the progress bar
-        dialog.show()
+        self.progress_dialog.show()
 
-        worker_thread.started.connect(worker.process)
-        worker_thread.finished.connect(dialog.close)
-        dialog.canceled.connect(worker_thread.requestInterruption)
-        worker_thread.start()
-
-        # Wait until the thread is finished
-        while not worker_thread.isFinished():
-            QCoreApplication.processEvents()
-            time.sleep(0.1)
-
-        del worker
-        del worker_thread
-
-        self.fom_tab_button_generate.setEnabled(True)
+        self.worker_thread.started.connect(self.worker.process)
+        self.worker_thread.finished.connect(self.progress_dialog.close)
+        self.progress_dialog.canceled.connect(self.worker_thread.requestInterruption)
+        self.worker_thread.start()
 
     def set_fom(self, fom: numpy.ndarray) -> None:
         """
@@ -511,10 +519,15 @@ class VisualizationWidget(QWidget):
         Returns:
             None
         """
+        if self.worker_thread:
+            del self.worker_thread
+            self.worker_thread = None
+
         self.fom = fom
         if self.fom is not None:
             self.image_widget.set_image(convert_numpy_to_qimage(self.fom))
             self.fom_tab_save_button.setEnabled(True)
+        self.fom_tab_button_generate.setEnabled(True)
 
     def generate_vector(self) -> None:
         """
@@ -527,7 +540,7 @@ class VisualizationWidget(QWidget):
         if self.directions is None:
             return
 
-        self.vector_tab_button_generate.setEnabled(False)
+        self.fom_tab_button_generate.setEnabled(False)
 
         # Get parameters from interface
         color_map = self.vector_color_map.currentText()
@@ -549,38 +562,36 @@ class VisualizationWidget(QWidget):
         fig, ax = plt.subplots(dpi=self.vector_tab_dpi_parameter.value())
 
         # Show a progress bar while the parameter maps are generated
-        dialog = QProgressDialog("Generating...", "Cancel", 0, 0, self)
-        dialog.setCancelButton(None)
-        dialog.setWindowFlag(Qt.CustomizeWindowHint, True)
-        dialog.setWindowFlag(Qt.WindowCloseButtonHint, False)
+        if self.progress_dialog:
+            del self.progress_dialog
+        self.progress_dialog = QProgressDialog("Generating...", "Cancel", 0, 0, self)
+        self.progress_dialog.setCancelButton(None)
+        self.progress_dialog.setWindowFlag(Qt.CustomizeWindowHint, True)
+        self.progress_dialog.setWindowFlag(Qt.WindowCloseButtonHint, False)
 
         # Move the main workload to another thread to prevent freezing the GUI
-        worker_thread = QThread()
-        worker = VectorWorker(fig, ax, self.directions, alpha, thinout, scale, vector_width,
+        if self.worker_thread:
+            del self.worker_thread
+            self.worker_thread = None
+        self.worker_thread = QThread()
+        self.worker_thread.setTerminationEnabled(True)
+        if self.worker:
+            del self.worker
+        self.worker = VectorWorker(fig, ax, self.directions, alpha, thinout, scale, vector_width,
                               self.vector_checkbox_activate_distribution.isChecked(), threshold,
                               color_map, self.vector_background, value_weighting)
         # Update the progress bar whenever a step is finished
-        worker.currentStep.connect(dialog.setLabelText)
-        worker.finishedWork.connect(worker_thread.quit)
-        worker.finishedWork.connect(self.set_vector)
-        worker.errorMessage.connect(self.show_error_message)
-        worker.moveToThread(worker_thread)
+        self.worker.currentStep.connect(self.progress_dialog.setLabelText)
+        self.worker.finishedWork.connect(self.worker_thread.quit)
+        self.worker.finishedWork.connect(self.set_vector)
+        self.worker.errorMessage.connect(self.show_error_message)
+        self.worker.moveToThread(self.worker_thread)
         # Show the progress bar
-        dialog.show()
+        self.progress_dialog.show()
 
-        worker_thread.started.connect(worker.process)
-        worker_thread.finished.connect(dialog.close)
-        worker_thread.start()
-
-        # Wait until the thread is finished
-        while not worker_thread.isFinished():
-            QCoreApplication.processEvents()
-            time.sleep(0.1)
-
-        del worker
-        del worker_thread
-
-        self.vector_tab_button_generate.setEnabled(True)
+        self.worker_thread.started.connect(self.worker.process)
+        self.worker_thread.finished.connect(self.progress_dialog.close)
+        self.worker_thread.start()
 
     def set_vector(self, image: numpy.ndarray) -> None:
         """
@@ -596,6 +607,7 @@ class VisualizationWidget(QWidget):
             self.vector_field = image
             self.image_widget.set_image(convert_numpy_to_qimage(self.vector_field))
             self.vector_tab_save_button.setEnabled(True)
+        self.vector_tab_button_generate.setEnabled(True)
 
     def generate_parameter_map(self) -> None:
         """
