@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QFileDialog, \
-    QLabel, QPushButton, QCheckBox, QSizePolicy, QHBoxLayout, QComboBox
+    QLabel, QPushButton, QCheckBox, QSizePolicy, QHBoxLayout, QComboBox, QMessageBox
 
 from .ImageWidget import ImageWidget, convert_numpy_to_qimage
 import SLIX
@@ -10,10 +10,12 @@ import numpy
 
 __all__ = ['ClusterWidget']
 
+
 class ClusterWidget(QWidget):
     """
     Widget for clustering images.
     """
+
     def __init__(self):
         super().__init__()
 
@@ -143,10 +145,15 @@ class ClusterWidget(QWidget):
             return
 
         loaded_parameter_maps, _ = Cluster.load_parameter_maps(self.folder)
-        result_mask = SLIX.classification.full_mask(loaded_parameter_maps['high_prominence_peaks'],
-                                                    loaded_parameter_maps['low_prominence_peaks'],
-                                                    loaded_parameter_maps['peakdistance'],
-                                                    loaded_parameter_maps['max'])
+        try:
+            result_mask = SLIX.classification.full_mask(loaded_parameter_maps['high_prominence_peaks'],
+                                                        loaded_parameter_maps['low_prominence_peaks'],
+                                                        loaded_parameter_maps['peakdistance'],
+                                                        loaded_parameter_maps['max'])
+        except KeyError:
+            QMessageBox.warning(self, "Error", "Could not generate preview.\n"
+                                               "Make sure you have selected a folder with all parameter maps.")
+            return
 
         # Get the color map from matplotlib based on the selected item in the QWidget
         colormap = matplotlib.cm.get_cmap(self.sidebar_color_map.currentText())
@@ -181,45 +188,64 @@ class ClusterWidget(QWidget):
         # determined by the input file name.
         if self.sidebar_checkbox_flat.isChecked():
             name = basename.replace('basename', 'flat_mask')
-            flat_mask = SLIX.classification.flat_mask(loaded_parameter_maps['high_prominence_peaks'],
-                                                      loaded_parameter_maps['low_prominence_peaks'],
-                                                      loaded_parameter_maps['peakdistance'])
-            filename = f'{folder}/{name}.tiff'
-            SLIX.io.imwrite(filename, flat_mask)
+            try:
+                flat_mask = SLIX.classification.flat_mask(loaded_parameter_maps['high_prominence_peaks'],
+                                                          loaded_parameter_maps['low_prominence_peaks'],
+                                                          loaded_parameter_maps['peakdistance'])
+                filename = f'{folder}/{name}.tiff'
+                SLIX.io.imwrite(filename, flat_mask)
+            except KeyError:
+                QMessageBox.warning(self, "Error", "Could not generate flat mask.\n"
+                                                   "Make sure you have selected a folder with all parameter maps.")
+                return
         # If the user has selected to generate the crossing mask, generate it.
         # Save the result in the folder the user has chosen. The filename will be
         # determined by the input file name.
         if self.sidebar_checkbox_crossing.isChecked():
             name = basename.replace('basename', 'crossing_mask')
-            mask = SLIX.classification.crossing_mask(loaded_parameter_maps['high_prominence_peaks'],
-                                                     loaded_parameter_maps['max'])
-            filename = f'{folder}/{name}.tiff'
-            SLIX.io.imwrite(filename, mask)
+            try:
+                mask = SLIX.classification.crossing_mask(loaded_parameter_maps['high_prominence_peaks'],
+                                                         loaded_parameter_maps['max'])
+                filename = f'{folder}/{name}.tiff'
+                SLIX.io.imwrite(filename, mask)
+            except KeyError:
+                QMessageBox.warning(self, "Error", "Could not generate crossing mask.\n"
+                                                   "Make sure you have selected a folder with all parameter maps.")
+                return
         # If the user has selected to generate the inclined mask, generate it.
         # Save the result in the folder the user has chosen. The filename will be
         # determined by the input file name.
         if self.sidebar_checkbox_inclined.isChecked():
             name = basename.replace('basename', 'inclined_mask')
+            try:
+                if flat_mask is None:
+                    flat_mask = SLIX.classification.flat_mask(loaded_parameter_maps['high_prominence_peaks'],
+                                                              loaded_parameter_maps['low_prominence_peaks'],
+                                                              loaded_parameter_maps['peakdistance'])
 
-            if flat_mask is None:
-                flat_mask = SLIX.classification.flat_mask(loaded_parameter_maps['high_prominence_peaks'],
-                                                          loaded_parameter_maps['low_prominence_peaks'],
-                                                          loaded_parameter_maps['peakdistance'])
-
-            mask = SLIX.classification.inclinated_mask(loaded_parameter_maps['high_prominence_peaks'],
-                                                       loaded_parameter_maps['peakdistance'],
-                                                       loaded_parameter_maps['max'],
-                                                       flat_mask)
-            filename = f'{folder}/{name}.tiff'
-            SLIX.io.imwrite(filename, mask)
+                mask = SLIX.classification.inclinated_mask(loaded_parameter_maps['high_prominence_peaks'],
+                                                           loaded_parameter_maps['peakdistance'],
+                                                           loaded_parameter_maps['max'],
+                                                           flat_mask)
+                filename = f'{folder}/{name}.tiff'
+                SLIX.io.imwrite(filename, mask)
+            except KeyError:
+                QMessageBox.warning(self, "Error", "Could not generate inclined mask.\n"
+                                                   "Make sure you have selected a folder with all parameter maps.")
+                return
         # If the user has selected to generate the mask containing all parameters, generate it.
         # Save the result in the folder the user has chosen. The filename will be
         # determined by the input file name.
         if self.sidebar_checkbox_all.isChecked():
             name = basename.replace('basename', 'full_mask')
-            mask = SLIX.classification.full_mask(loaded_parameter_maps['high_prominence_peaks'],
-                                                 loaded_parameter_maps['low_prominence_peaks'],
-                                                 loaded_parameter_maps['peakdistance'],
-                                                 loaded_parameter_maps['max'])
-            filename = f'{folder}/{name}.tiff'
-            SLIX.io.imwrite(filename, mask)
+            try:
+                mask = SLIX.classification.full_mask(loaded_parameter_maps['high_prominence_peaks'],
+                                                     loaded_parameter_maps['low_prominence_peaks'],
+                                                     loaded_parameter_maps['peakdistance'],
+                                                     loaded_parameter_maps['max'])
+                filename = f'{folder}/{name}.tiff'
+                SLIX.io.imwrite(filename, mask)
+            except KeyError:
+                QMessageBox.warning(self, "Error", "Could not generate mask.\n"
+                                                   "Make sure you have selected a folder with all parameter maps.")
+                return
