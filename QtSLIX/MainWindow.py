@@ -46,10 +46,6 @@ class MainWindow(QMainWindow):
         self.setup_ui()
         self.show()
 
-    def __del__(self):
-        if self.layout:
-            del self.layout
-
     def closeEvent(self, a0: QCloseEvent) -> None:
         """
         Override the close event.
