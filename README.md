@@ -95,7 +95,7 @@ python3 bin/main.py
 ```
 
 ### General interface
-<img src="assets/Interface_On_Open.png" width="720">
+<img src="https://github.com/3d-pli/QtSLIX/blob/main/assets/Interface_On_Open.png?raw=true" width="720">
 
 When opening the program for the first time, you will be greeted with the interface shown in the figure above. 
 The menu bar only contains a help option where things like the license and a link to the repository are stored.
@@ -111,7 +111,7 @@ when you install the package `SLIX`. You can see the command line options [here]
 The left area is a preview window of a loaded measurement. When using one of the buttons `Measurement` or `Folder`, you will be able to open a SLI measurement.
 The preview window will then show the loaded measurement as seen below.
 
-<img src="assets/Interface_Parameter_Generator_Loaded_Measurement.png" width="720">
+<img src="https://github.com/3d-pli/QtSLIX/blob/main/assets/Interface_Parameter_Generator_Loaded_Measurement.png?raw=true" width="720">
 
 There is a scroll bar below the measurement which can be used to scroll through all the measurement angles.
 This way, one can ensure that the correct measurement is loaded and no image contains wrong information.
@@ -136,13 +136,13 @@ Click on the `Generate` button to generate the parameter maps. A save dialog wil
 The file names are generated based on the input file name / input folder name. The extension of the file is automatically added and defaults to `.tiff` in the current version.
 A progress bar will show the progress of the calculation. You are able to use the graphical user interface in the meantime.
 
-<img src="assets/Interface_Parameter_Generation_Generate.png" width="720">
+<img src="https://github.com/3d-pli/QtSLIX/blob/main/assets/Interface_Parameter_Generation_Generate.png?raw=true" width="720">
 
 ### Visualization
 The second available tab in the interface covers the visualization of resulting parameter maps. 
 The general interface can be seen below.
 
-<img src="assets/Interface_Visualization_On_Open.png" width="720">
+<img src="https://github.com/3d-pli/QtSLIX/blob/main/assets/Interface_Visualization_On_Open.png?raw=true" width="720">
 
 The right side has three options to visualize or show parameter maps:
 1. **FOM**: Visualize up to four direction maps as a fiber orientation map
@@ -184,7 +184,7 @@ Similar to the fiber orientation map, vectors can be used to visualize the direc
 The vectors will be shown as lines with a defined with and length. The color of the lines is determined by the direction angles and will follow the color spaces of the fiber orientation map.
 The general interface can be seen below.
 
-<img src="assets/Interface_Visualization_Vector.png" width="720">
+<img src="https://github.com/3d-pli/QtSLIX/blob/main/assets/Interface_Visualization_Vector.png?raw=true" width="720">
 
 Here the background image can be loaded by clicking on the **Open Background Image** button. 
 In addition, the vector length can be weighted by using a parameter map which will be normalized to a range of 0-1. 
@@ -221,7 +221,7 @@ This feature may be explored in the future.
 
 A preview of the view is shown below.
 
-<img src="assets/Interface_Visualization_Parameter.png" width="720">
+<img src="https://github.com/3d-pli/QtSLIX/blob/main/assets/Interface_Visualization_Parameter.png?raw=true" width="720">
 
 ### Clustering
 
@@ -229,7 +229,7 @@ The last available tab contains the clustering of a measurement based on the gen
 Keep in mind that, just like with the normal version of `SLIXCluster`, optional parameter maps like **Min** and **Max** 
 might be required to ensure that all clustering steps can function as expected.
 
-<img src="assets/Interface_Visualization_Cluster.png" width="720">
+<img src="https://github.com/3d-pli/QtSLIX/blob/main/assets/Interface_Visualization_Cluster.png?raw=true" width="720">
 
 Clicking on the **Folder** option will open a folder selection dialog. Here, all needed files need to be located.
 Just like in the parameter map, the user can select the Matplotlib color space used for the visualization.
