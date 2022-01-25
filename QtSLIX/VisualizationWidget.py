@@ -540,8 +540,6 @@ class VisualizationWidget(QWidget):
         if self.directions is None:
             return
 
-        self.fom_tab_button_generate.setEnabled(False)
-
         # Get parameters from interface
         color_map = self.vector_color_map.currentText()
         alpha = self.vector_tab_alpha_parameter.value()
