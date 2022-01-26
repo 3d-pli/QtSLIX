@@ -1,3 +1,5 @@
+import os.path
+
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, \
     QFileDialog, QCheckBox, QPushButton, QProgressDialog, \
     QSizePolicy, QComboBox, QDoubleSpinBox, QLabel, QMessageBox
@@ -214,7 +216,11 @@ class ParameterGeneratorWidget(QWidget):
         Returns:
              None
         """
-        file = QFileDialog.getOpenFileName(self, "Open Measurement", "",
+        if self.filename is None:
+            open_folder = os.path.expanduser('~')
+        else:
+            open_folder = os.path.dirname(self.filename)
+        file = QFileDialog.getOpenFileName(self, "Open Measurement", open_folder,
                                            "*.tiff ;; *.tif ;; *.h5 ;; *.nii ;; *.nii.gz")[0]
         if not file:
             return
@@ -233,7 +239,12 @@ class ParameterGeneratorWidget(QWidget):
         Returns:
             None
         """
-        folder = QFileDialog.getExistingDirectory(self, "Open Folder", "")
+        if self.filename is None:
+            open_folder = os.path.expanduser('~')
+        else:
+            open_folder = self.filename
+
+        folder = QFileDialog.getExistingDirectory(self, "Open Folder", open_folder)
 
         if not folder:
             return
@@ -265,8 +276,13 @@ class ParameterGeneratorWidget(QWidget):
         Returns:
             None
         """
+        if self.filename != "":
+            open_folder = os.path.expanduser('~')
+        else:
+            open_folder = os.path.dirname(self.filename)
+
         # Prevent the button from being pressed multiple times
-        output_folder = QFileDialog.getExistingDirectory(self, "Save files in folder", "")
+        output_folder = QFileDialog.getExistingDirectory(self, "Save files in folder", open_folder)
 
         if not output_folder:
             return
