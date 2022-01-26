@@ -7,6 +7,7 @@ from SLIX._cmd import Cluster
 
 import matplotlib
 import numpy
+import os
 
 __all__ = ['ClusterWidget']
 
@@ -123,7 +124,9 @@ class ClusterWidget(QWidget):
         Returns:
             None
         """
-        folder = QFileDialog.getExistingDirectory(self, "Open Folder", "")
+        if self.folder is None:
+            self.folder = os.path.expanduser('~')
+        folder = QFileDialog.getExistingDirectory(self, "Open Folder", self.folder)
 
         if not folder:
             # The user cancelled the dialog
@@ -172,7 +175,9 @@ class ClusterWidget(QWidget):
         Returns:
             None
         """
-        folder = QFileDialog.getExistingDirectory(self, 'Save Cluster Images')
+        if self.folder is None:
+            self.folder = os.path.expanduser('~')
+        folder = QFileDialog.getExistingDirectory(self, 'Save Cluster Images', self.folder)
         if len(folder) == 0:
             # The user canceled the selection
             return

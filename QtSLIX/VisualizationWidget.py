@@ -1,5 +1,3 @@
-import time
-
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, \
     QFileDialog, QCheckBox, QPushButton, QProgressDialog, \
     QSizePolicy, QTabWidget, QComboBox, QLabel, QMessageBox, \
@@ -11,6 +9,7 @@ from .ImageWidget import ImageWidget, convert_numpy_to_qimage
 from .ThreadWorkers.Visualization import FOMWorker, VectorWorker
 import numpy
 import matplotlib
+import os
 from matplotlib import pyplot as plt
 
 __all__ = ['VisualizationWidget']
@@ -30,6 +29,7 @@ class VisualizationWidget(QWidget):
         self.sidebar_tabbar = None
         self.image_widget = None
         self.filename = None
+        self.dirname = None
 
         self.parameter_map = None
         self.parameter_map_color_map = None
@@ -320,9 +320,15 @@ class VisualizationWidget(QWidget):
         Returns:
             None
         """
-        filename = QFileDialog.getOpenFileNames(self, 'Open Directions', '.', '*.tiff;; *.h5;; *.nii')[0]
+        if self.dirname:
+            dirname = self.dirname
+        else:
+            dirname = os.path.expanduser('~')
+        filename = QFileDialog.getOpenFileNames(self, 'Open Directions', dirname,
+                                                '*.tif;; *.tiff;; *.h5;; *.nii')[0]
         if len(filename) == 0:
             return
+        self.dirname = os.path.dirname(filename[0])
 
         try:
             direction_image = None
@@ -357,9 +363,15 @@ class VisualizationWidget(QWidget):
         Returns:
             None
         """
-        filename = QFileDialog.getOpenFileNames(self, 'Open Inclinations', '.', '*.tiff;; *.h5;; *.nii')[0]
+        if self.dirname:
+            dirname = self.dirname
+        else:
+            dirname = os.path.expanduser('~')
+        filename = QFileDialog.getOpenFileNames(self, 'Open Inclinations', dirname,
+                                                '*.tif;; *.tiff;; *.h5;; *.nii')[0]
         if len(filename) == 0:
             return
+        self.dirname = os.path.dirname(filename[0])
 
         try:
             inclination_image = None
@@ -391,9 +403,15 @@ class VisualizationWidget(QWidget):
         Returns:
             None
         """
-        filename = QFileDialog.getOpenFileName(self, 'Open Parameter Map', '.', '*.tiff;; *.h5;; *.nii')[0]
+        if self.dirname:
+            dirname = self.dirname
+        else:
+            dirname = os.path.expanduser('~')
+        filename = QFileDialog.getOpenFileName(self, 'Open Parameter Map', dirname,
+                                               '*.tif;; *.tiff;; *.h5;; *.nii')[0]
         if len(filename) == 0:
             return
+        self.dirname = os.path.dirname(filename)
 
         self.parameter_map = SLIX.io.imread(filename)
         self.parameter_map_tab_button_save.setEnabled(True)
@@ -407,9 +425,15 @@ class VisualizationWidget(QWidget):
         Returns:
             None
         """
-        filename = QFileDialog.getOpenFileName(self, 'Open Saturation weight', '.', '*.tiff;; *.h5;; *.nii')[0]
+        if self.dirname:
+            dirname = self.dirname
+        else:
+            dirname = os.path.expanduser('~')
+        filename = QFileDialog.getOpenFileName(self, 'Open Saturation weight', dirname,
+                                               '*.tif;; *.tiff;; *.h5;; *.nii')[0]
         if len(filename) == 0:
             return
+        self.dirname = os.path.dirname(filename)
         self.saturation_weighting = SLIX.io.imread(filename)
 
     def open_value_weighting(self) -> None:
@@ -419,9 +443,15 @@ class VisualizationWidget(QWidget):
         Returns:
             None
         """
-        filename = QFileDialog.getOpenFileName(self, 'Open Value weight', '.', '*.tiff;; *.h5;; *.nii')[0]
+        if self.dirname:
+            dirname = self.dirname
+        else:
+            dirname = os.path.expanduser('~')
+        filename = QFileDialog.getOpenFileName(self, 'Open Value weight', dirname,
+                                               '*.tif;; *.tiff;; *.h5;; *.nii')[0]
         if len(filename) == 0:
             return
+        self.dirname = os.path.dirname(filename)
         self.value_weighting = SLIX.io.imread(filename)
 
     def open_vector_background(self) -> None:
@@ -431,9 +461,15 @@ class VisualizationWidget(QWidget):
         Returns:
             None
         """
-        filename = QFileDialog.getOpenFileName(self, 'Open Background Image', '.', '*.tiff;; *.h5;; *.nii')[0]
+        if self.dirname:
+            dirname = self.dirname
+        else:
+            dirname = os.path.expanduser('~')
+        filename = QFileDialog.getOpenFileName(self, 'Open Background Image', dirname,
+                                               '*.tif;; *.tiff;; *.h5;; *.nii')[0]
         if len(filename) == 0:
             return
+        self.dirname = os.path.dirname(filename)
         self.vector_background = SLIX.io.imread(filename)
         while len(self.vector_background.shape) > 2:
             self.vector_background = numpy.mean(self.vector_background, axis=-1)
@@ -445,9 +481,15 @@ class VisualizationWidget(QWidget):
         Returns:
             None
         """
-        filename = QFileDialog.getOpenFileName(self, 'Open Weight for vector', '.', '*.tiff;; *.h5;; *.nii')[0]
+        if self.dirname:
+            dirname = self.dirname
+        else:
+            dirname = os.path.expanduser('~')
+        filename = QFileDialog.getOpenFileName(self, 'Open Weight for vector', dirname,
+                                               '*.tif;; *.tiff;; *.h5;; *.nii')[0]
         if len(filename) == 0:
             return
+        self.dirname = os.path.dirname(filename)
         # Open and normalize the weighting image
         self.vector_weighting = SLIX.io.imread(filename)
         self.vector_weighting = (self.vector_weighting - self.vector_weighting.min()) / (
@@ -576,8 +618,8 @@ class VisualizationWidget(QWidget):
         if self.worker:
             del self.worker
         self.worker = VectorWorker(fig, ax, self.directions, alpha, thinout, scale, vector_width,
-                              self.vector_checkbox_activate_distribution.isChecked(), threshold,
-                              color_map, self.vector_background, value_weighting)
+                                   self.vector_checkbox_activate_distribution.isChecked(), threshold,
+                                   color_map, self.vector_background, value_weighting)
         # Update the progress bar whenever a step is finished
         self.worker.currentStep.connect(self.progress_dialog.setLabelText)
         self.worker.finishedWork.connect(self.worker_thread.quit)
@@ -634,7 +676,12 @@ class VisualizationWidget(QWidget):
         Returns:
              None
         """
-        filename, datatype = QFileDialog.getSaveFileName(self, 'Save FOM', '.', '*.tiff;; *.h5')
+        if self.dirname:
+            dirname = self.dirname
+        else:
+            dirname = os.path.expanduser('~')
+        filename, datatype = QFileDialog.getSaveFileName(self, 'Save FOM', dirname, '*.tiff;; *.h5')
+        self.dirname = os.path.dirname(filename)
         if len(filename) > 0:
             datatype = datatype[1:]
             if not filename.endswith(datatype):
@@ -648,7 +695,12 @@ class VisualizationWidget(QWidget):
         Returns:
              None
         """
-        filename, datatype = QFileDialog.getSaveFileName(self, 'Save Vector Image', '.', '*.tiff;; *.h5')
+        if self.dirname:
+            dirname = self.dirname
+        else:
+            dirname = os.path.expanduser('~')
+        filename, datatype = QFileDialog.getSaveFileName(self, 'Save Vector Image', dirname, '*.tiff;; *.h5')
+        self.dirname = os.path.dirname(filename)
         if len(filename) > 0:
             datatype = datatype[1:]
             if not filename.endswith(datatype):
@@ -662,8 +714,13 @@ class VisualizationWidget(QWidget):
         Returns:
              None
         """
-        filename, datatype = QFileDialog.getSaveFileName(self, 'Save Parameter Map', '.', '*.tiff;; *.h5')
+        if self.dirname:
+            dirname = self.dirname
+        else:
+            dirname = os.path.expanduser('~')
+        filename, datatype = QFileDialog.getSaveFileName(self, 'Save Parameter Map', dirname, '*.tiff;; *.h5')
         if len(filename) > 0:
+            self.dirname = os.path.dirname(filename)
             datatype = datatype[1:]
             if not filename.endswith(datatype):
                 filename += datatype
